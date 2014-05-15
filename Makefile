@@ -12,7 +12,7 @@ endif
 
 ifeq (Linux, $(uname_S))
 LIBS=-lrt -ldl -lm -pthread -lcurl
-UV_LIB=libuv/libuv.so
+UV_LIB=libuv/.libs/libuv.so
 endif
 
 all: yamhd-c-libuv
@@ -29,8 +29,10 @@ clean:
 
 clean-all: clean
 	make -C libuv clean
+	rm -rf docs
 
 doc:
 	docco -L res/docco-lang.json *.c
+	mv docs/yamhd-c-libuv.html docs/index.html
 
 .PHONY: all clean clean-all doc
