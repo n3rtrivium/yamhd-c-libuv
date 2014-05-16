@@ -2,4 +2,5 @@
 .cproject
 yamhd-c-libuv.dSYM
 yamhd-c-libuv
+lib
 docs
