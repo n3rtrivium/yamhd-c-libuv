@@ -1,6 +1,6 @@
 CC=gcc
 UV_PATH=libuv
-UV_CONFIG=
+UV_CONFIG=--disable-dtrace --enable-shared --prefix="$(shell pwd)"
 CFLAGS=-g -Wall -I$(UV_PATH)/include
 LIBS=
 
@@ -8,13 +8,12 @@ uname_S=$(shell uname -s)
 
 ifeq (Darwin, $(uname_S))
 CFLAGS+=-framework CoreServices
-UV_CONFIG=--disable-dtrace --enable-shared --prefix="$(shell pwd)"
 UV_EXT=11.dylib
 endif
 
 ifeq (Linux, $(uname_S))
-LIBS=-lrt -ldl -lm -pthread -lcurl
-UV_EXT=so
+LIBS=-lrt -ldl -lm -pthread -lcurl -Wl,-rpath -Wl,lib
+UV_EXT=so.11 
 endif
 
 UV_LIB=lib/libuv.$(UV_EXT)
