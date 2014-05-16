@@ -661,7 +661,7 @@ static void on_tcp_write(uv_write_t* req, int status) {
             
             // Check if an error occurred in an other handler.
             if (rr->dead) {
-                req_res_free(rr)
+                req_res_free(rr);
             }
             else {
                 DEBUG("on_tcp_write\n");
@@ -850,12 +850,8 @@ static void on_file_open(uv_fs_t* req) {
                             send_headers_buf(rr);
                         }
                         else {
-                            /* Do nothing.
-                             ToDo: Please check.*/
+                            DEBUG("on_file_open error: &stat_req.statbuf is NULL.\n");
                         }
-                    }
-                    else {
-                        DEBUG("on_file_open error: &stat_req.statbuf is NULL.\n");
                     }
                 }
             }
@@ -1032,29 +1028,32 @@ int main(int argc, char *argv[]) {
         /* ToDo: Add check for argv ! */
         web_root_len = strlen(web_root);
         port = (int)strtol(argv[2], NULL, 0);
-        if (0 != uv_ip4_addr(argv[1], port, &addr)) {
-            fprintf(stderr, "Listen error %s\n", uv_err_name(r));
+        return_value = uv_ip4_addr(argv[1], port, &addr);
+        if (0 != return_value) {
+            fprintf(stderr, "Listen error %s\n", uv_err_name(return_value));
             return_value = 2;
         }
         else {
             
             // Create a new TCP socket.
-            r = uv_tcp_init(loop, &tcp_server);
-            if (r) {
-                fprintf(stderr, "Socket creation error %s\n", uv_err_name(r));
+            return_value = uv_tcp_init(loop, &tcp_server);
+            if (return_value) {
+                fprintf(stderr, "Socket creation error %s\n", uv_err_name(return_value));
                 return_value = 3;
             }
             
             // Bind the socket to the IPv4 address and port.
-            if (0 != uv_tcp_bind(&tcp_server, (const struct sockaddr*) &addr, 0)) {
-                fprintf(stderr, "Bind error %s\n", uv_err_name(r));
+            return_value = uv_tcp_bind(&tcp_server, (const struct sockaddr*) &addr, 0);
+            if (0 != return_value) {
+                fprintf(stderr, "Bind error %s\n", uv_err_name(return_value));
                 return_value = 4;
             }
             
             // Register the [on_connection](#on-connection) handler for connections on
             // the socket.
-            if (0 != uv_listen((uv_stream_t*)&tcp_server, SOMAXCONN, on_connection)) {
-                fprintf(stderr, "Listen error %s\n", uv_err_name(r));
+            return_value = uv_listen((uv_stream_t*)&tcp_server, SOMAXCONN, on_connection);
+            if (0 != return_value) {
+                fprintf(stderr, "Listen error %s\n", uv_err_name(return_value));
                 return_value = 5;
             }
             /* ToDo: Add check for argv ! */
