@@ -134,9 +134,7 @@ static void on_close(uv_handle_t* peer);
 // - **file**: File handle.
 // - **method**: HTTP method (currently not used).
 // - **path**: The mapped filesystem path.
-// - **path_len**: The length of the mapped filesystem path.
 // - **content_type**: The content type header.
-// - **content_type_len**: See [RFC 4288](http://www.ietf.org/rfc/rfc4288.txt?number=4288s) 
 //   4.2 for the max length.
 // - **close_after_write (flag)**: Close the connection after the next write.
 // - **read_on_write (flag)**: Read from file after the next write.
@@ -150,10 +148,8 @@ typedef struct {
 	uv_stream_t* stream;
 	int file;
 	char* method[8];
-	char* path;
-	size_t path_len;
-	char* content_type[256];
-	size_t content_type_len;
+	uv_buf_t path;
+	uv_buf_t content_type;
 	int close_after_write;
 	int read_on_write;
 	int dead;
@@ -182,12 +178,53 @@ static void req_res_free(req_res_t* rr);
 // - **[set headers](#set-headers-helper)**: Set the headers buffer.
 // - **[parse](#simple-request-header-parser)**: Simple request header parser.
 static void send_not_found(req_res_t* rr);
-static void set_headers(req_res_t* rr, const char* code);
+static void set_headers(req_res_t* rr, uv_buf_t code);
 static int	parse(const uv_buf_t* req, req_res_t* rr);
 
 // # Stop reading!
 // Since this file starts with utility functions it is a good idea to read 
 // the file bottom up. [Goto main](#main)
+
+// ### Global fixed bufs
+// This buffers should **never** be altered.
+static uv_buf_t http_not_found_code;
+static uv_buf_t http_not_found_body;
+static uv_buf_t http_ok_code;
+static uv_buf_t http_req_start;
+static uv_buf_t http_req_after_path;
+static uv_buf_t http_req_index;
+static uv_buf_t http_res_start;
+static uv_buf_t http_res_key_content_type;
+static uv_buf_t http_res_content_type_html;
+static uv_buf_t http_res_content_type_html_ext;
+static uv_buf_t http_res_content_type_javascript;
+static uv_buf_t http_res_content_type_javascript_ext;
+static uv_buf_t http_res_content_type_css;
+static uv_buf_t http_res_content_type_css_ext;
+static uv_buf_t http_res_content_type_binary;
+static uv_buf_t http_res_end;
+
+// #### Initialize the global fixed buffers.
+// This function is called early in the main function to initialize the
+// the fixed buffers.
+static void global_bufs_init() {
+	http_not_found_code = uv_buf_init("404 Not Found", 13);
+	http_not_found_body = uv_buf_init("<h1>Not Found</h1>\n\0", 20);
+	http_ok_code = uv_buf_init("200 OK", 6);
+	http_req_start = uv_buf_init("GET ", 4);
+	http_req_after_path = uv_buf_init(" HTTP/1", 7);
+	http_req_index = uv_buf_init("index.html\0", 11);
+	http_res_start = uv_buf_init("HTTP/1.1 ", 8);
+	http_res_key_content_type = uv_buf_init("Content-Type: ", 14);
+	http_res_content_type_html = uv_buf_init("text/html", 9);
+	http_res_content_type_html_ext = uv_buf_init(".html", 5);
+	http_res_content_type_javascript = uv_buf_init("text/javascript", 15);
+	http_res_content_type_javascript_ext = uv_buf_init(".js", 3);
+	http_res_content_type_css = uv_buf_init("text/css", 8);
+	http_res_content_type_css_ext = uv_buf_init(".css", 4);
+	http_res_content_type_binary = uv_buf_init("application/octet-stream", 24);
+	http_res_end = uv_buf_init("\n\n", 2);
+}
 
 // ## State
 
@@ -199,10 +236,8 @@ static req_res_t* req_res_init(uv_stream_t* handle) {
 		rr->stream = handle;
 		rr->file = 0;
 		memset(rr->method, '\0', 8);
-		rr->path = NULL;
-		rr->path_len = 0;
-		memset(rr->content_type, '\0', 256);
-		rr->content_type_len = 0;
+		rr->path.len = 0;
+		rr->content_type = http_res_content_type_html;
 		rr->close_after_write = 0;
 		rr->read_on_write = 0;
 		rr->dead = 0;
@@ -288,9 +323,9 @@ static void req_res_free(req_res_t* rr) {
 			DEBUG("req_res_free has no request, but is not dead.\n");
 		}
 		// Free the `path` string.
-		if (rr->path != NULL) {
+		if (rr->path.len > 0) {
 			/* ToDo: Please review, whether the 'if' statement is necessary. */
-			free(rr->path);
+			free(rr->path.base);
 		}
 		else {
 			/* Do nothing.*/
@@ -396,7 +431,7 @@ static void open_path_as_file(req_res_t *rr) {
 
 		file_open_req->data = rr;
 		rr->pending_requests++;
-		r = uv_fs_open(loop, file_open_req, rr->path, O_ASYNC | O_RDONLY, S_IFREG, on_file_open);
+		r = uv_fs_open(loop, file_open_req, rr->path.base, O_ASYNC | O_RDONLY, S_IFREG, on_file_open);
 		if (r != 0) {
 			fprintf(stderr, "open_path_as_file error: %d\n", r);
 			rr->pending_requests--;
@@ -451,19 +486,18 @@ static void send_not_found(req_res_t* rr) {
 		DEBUG("send_not_found\n");
 		// `rr->close_after_write = 1` makes `on_tcp_write` close the connection.
 		rr->close_after_write = 1;
-		memcpy(rr->content_type, "text/html", 9);
-		rr->content_type_len = 9;
-		set_headers(rr, "404 Not Found");
+		rr->content_type = http_res_content_type_html;
+		set_headers(rr, http_not_found_code);
 		// Check if `headers_buf` is initialized.
 		if (rr->headers_buf == NULL) return;
 		// Check if the buffer is big enough to add the `Not found` body.
-		if (rr->headers_buf->len+20 >= HEADERS_BUF_SIZE) {
+		if (rr->headers_buf->len+http_not_found_body.len >= HEADERS_BUF_SIZE) {
 			fprintf(stderr, "headers buffer too small: -3");
 		}
 		else {
 			// Add the body and set the new buffer size.
-			memcpy(rr->headers_buf->base+rr->headers_buf->len, "<h1>Not Found</h1>\n\0", 20);
-			rr->headers_buf->len += 20;
+			memcpy(rr->headers_buf->base+rr->headers_buf->len, http_not_found_body.base, http_not_found_body.len);
+			rr->headers_buf->len += http_not_found_body.len;
 			send_headers_buf(rr);
 		}
 	}
@@ -473,22 +507,20 @@ static void send_not_found(req_res_t* rr) {
 }
 
 // ## set headers helper
-static void set_headers(req_res_t* rr, const char* code) {
-	/*strlen -> FixMe, if any possibility to access function set_headers with external input 'code'.!!!! */
+static void set_headers(req_res_t* rr, uv_buf_t code) {
 	if(rr != NULL) {
-		int code_len = strlen(code);
 		DEBUG("set_headers\n");
 		// Initialize the headers buffer.
 		req_res_init_headers_buf(rr);
 	
-		if (code_len+9 >= HEADERS_BUF_SIZE) {
+		if (code.len+http_res_start.len >= HEADERS_BUF_SIZE) {
 			fprintf(stderr, "headers buffer too small: -1");
 		}
 		else {
-			/* ToDo: please use defines instead magic numbers.*/
-			memcpy(rr->headers_buf->base, "HTTP/1.1 ", 9);
-			memcpy(rr->headers_buf->base+9, code, code_len);
-			int pos = 9+code_len;
+			memcpy(rr->headers_buf->base, http_res_start.base, http_res_start.len);
+			int pos = http_res_start.len;
+			memcpy(rr->headers_buf->base+pos, code.base, code.len);
+			pos += code.len;
 
 			// Get the UTC `struct tm`.
 			time_t now = time(NULL);
@@ -502,19 +534,18 @@ static void set_headers(req_res_t* rr, const char* code) {
 					fprintf(stderr, "strftime error");
 				}
 				else {
+					/* ToDo: reconsider */
 					pos = strlen(rr->headers_buf->base);
-					/*strlen -> FixMe: at least, check pos versus potential maximum. */
-					if (pos+17+rr->content_type_len >= HEADERS_BUF_SIZE) {
+					if (pos+http_res_key_content_type.len+rr->content_type.len+http_res_end.len >= HEADERS_BUF_SIZE) {
 						fprintf(stderr, "headers buffer too small: -2");
 					}
 					else {
-						/* ToDo: please use defines instead magic numbers.*/
-						memcpy(rr->headers_buf->base+pos, "Content-Type: ", 14);
-						pos += 14;
-						memcpy(rr->headers_buf->base+pos, rr->content_type, rr->content_type_len);
-						pos += rr->content_type_len;
-						memcpy(rr->headers_buf->base+pos, "\n\n", 2);
-						pos += 2;
+						memcpy(rr->headers_buf->base+pos, http_res_key_content_type.base, http_res_key_content_type.len);
+						pos += http_res_key_content_type.len;
+						memcpy(rr->headers_buf->base+pos, rr->content_type.base, rr->content_type.len);
+						pos += rr->content_type.len;
+						memcpy(rr->headers_buf->base+pos, http_res_end.base, http_res_end.len);
+						pos += http_res_end.len;
 						rr->headers_buf->len = pos;
 					}
 				}
@@ -522,7 +553,7 @@ static void set_headers(req_res_t* rr, const char* code) {
 		}
 	}
 	else {
-			DEBUG("set_headers error: rr is NULL.\n");
+		DEBUG("set_headers error: rr is NULL.\n");
 	}
 }
 
@@ -538,7 +569,7 @@ static int parse(const uv_buf_t* req, req_res_t* rr) {
 		DEBUG("parse\n");
 
 		// Check if it is an `GET` request.
-		if (strncmp(req->base, "GET ", 4) != 0) {
+		if (strncmp(req->base, http_req_start.base, http_req_start.len) != 0) {
 			fprintf(stderr, "Not a GET request\n");
 			return_value = -2;
 		}
@@ -559,42 +590,48 @@ static int parse(const uv_buf_t* req, req_res_t* rr) {
 				return_value = -3;
 			}
 			else {
-				/* ToDo: please use defines instead magic numbers.*/
 				// Check if it is a `HTTP` version 1.* request.
-				if (path_start+path_len+7 > req->len ||
-					strncmp(req->base+path_start+path_len, " HTTP/1", 7) != 0)
+				if (path_start+path_len + http_req_after_path.len > req->len ||
+					strncmp(req->base+path_start+path_len, http_req_after_path.base, http_req_after_path.len) != 0)
 				{
 					fprintf(stderr, "Not a HTTP/1 request\n");
 					return_value = -4;
 				}
 				else {
 					// Allocate memory for the `path`.
-					rr->path = malloc(web_root_len+path_len+1);
-					if (rr->path == NULL) {
+					char * path_buf = malloc(web_root_len+path_len);
+					if (path_buf == NULL) {
 						fprintf(stderr, "malloc error\n");
 						return_value = -5;
 					}
 					else {
 						// Copy the path and terminate it with `\0`.
-						strcpy(rr->path, web_root);
-						memcpy(rr->path+web_root_len, req->base+path_start, path_len+1);
-						rr->path[path_len+web_root_len] = '\0';
-						rr->path_len = path_len+web_root_len;
+						strcpy(path_buf, web_root);
+						memcpy(path_buf+web_root_len, req->base+path_start, path_len+1);
+						path_buf[path_len+web_root_len] = '\0';
+						rr->path = uv_buf_init(path_buf, web_root_len+path_len);
 						
-						/* ToDo: please use defines instead magic numbers.*/
 						// Set the content type based on the file extension.
-						if (strncmp(rr->path+rr->path_len-5, ".html", 5) == 0) {
-							memcpy(rr->content_type, "text/html", 9);
-							rr->content_type_len = 9;
-						} else if (strncmp(rr->path+rr->path_len-3, ".js", 3) == 0) {
-							memcpy(rr->content_type, "text/javascript", 15);
-							rr->content_type_len = 15;
-						} else if (strncmp(rr->path+rr->path_len-4, ".css", 4) == 0) {
-							memcpy(rr->content_type, "text/css", 8);
-							rr->content_type_len = 8;
+						if (rr->path.len > http_res_content_type_html_ext.len &&
+							strncmp(rr->path.base + rr->path.len - http_res_content_type_html_ext.len,
+								http_res_content_type_html_ext.base,
+								http_res_content_type_html_ext.len) == 0)
+						{
+							rr->content_type = http_res_content_type_html;
+						} else if (rr->path.len > http_res_content_type_javascript_ext.len &&
+							strncmp(rr->path.base + rr->path.len - http_res_content_type_javascript_ext.len,
+								http_res_content_type_javascript_ext.base,
+								http_res_content_type_javascript_ext.len) == 0)
+						{
+							rr->content_type = http_res_content_type_javascript;
+						} else if (rr->path.len > http_res_content_type_css_ext.len &&
+							strncmp(rr->path.base + rr->path.len - http_res_content_type_css_ext.len,
+								http_res_content_type_css_ext.base,
+								http_res_content_type_css_ext.len) == 0)
+						{
+							rr->content_type = http_res_content_type_css;
 						} else {
-							memcpy(rr->content_type, "application/octet-stream", 24);
-							rr->content_type_len = 24;
+							rr->content_type = http_res_content_type_binary;
 						}
 						return_value = 0;
 					}
@@ -766,7 +803,7 @@ static void on_file_open(uv_fs_t* req) {
 						send_not_found(rr);
 					}
 					else {
-						fprintf(stderr, "async open error '%s': %s\n", rr->path, uv_strerror(status));
+						fprintf(stderr, "async open error '%s': %s\n", rr->path.base, uv_strerror(status));
 						// Close the file and free the memory.
 						req_res_free(rr);
 					}
@@ -775,9 +812,9 @@ static void on_file_open(uv_fs_t* req) {
 					// TODO: Recheck if it is possible to fail in `on_file_open` and get `status < 0`.
 					uv_fs_t stat_req;
 					
-					r = uv_fs_stat(uv_default_loop(), &stat_req, rr->path, NULL);
+					r = uv_fs_stat(uv_default_loop(), &stat_req, rr->path.base, NULL);
 					if (r != 0) {
-						fprintf(stderr, "uv_fs_stat error '%s': %s\n", rr->path, uv_strerror(r));
+						fprintf(stderr, "uv_fs_stat error '%s': %s\n", rr->path.base, uv_strerror(r));
 						req_res_free(rr);
 					}
 					else {
@@ -787,23 +824,20 @@ static void on_file_open(uv_fs_t* req) {
 							if (!S_ISREG(s->st_mode)) {
 								// If the file is a directory append `index.html` to the path and reopen it.
 								if (S_ISDIR(s->st_mode)) {
-									if (rr->path_len+10 >= MAX_PATH_SIZE) {
-										fprintf(stderr, "headers buffer too small: -4");
+									if (rr->path.len + http_req_index.len >= MAX_PATH_SIZE) {
+										fprintf(stderr, "path to large: -4\n");
 										req_res_free(rr);
 									}
 									else {
-										/* ToDo: Please do not use magic numbers.*/
-										path_buf = malloc(rr->path_len+11);
+										path_buf = malloc(rr->path.len + http_req_index.len);
 										if(path_buf != NULL) {
 											
-											memcpy(path_buf, rr->path, rr->path_len);
-											memcpy(path_buf+rr->path_len, "index.html\0", 11);
-											free(rr->path);
-											rr->path = path_buf;
-											rr->path_len += 10;
+											memcpy(path_buf, rr->path.base, rr->path.len);
+											memcpy(path_buf+rr->path.len, http_req_index.base, http_req_index.len);
+											free(rr->path.base);
+											rr->path = uv_buf_init(path_buf, rr->path.len + http_req_index.len);
 											// Set the content type.
-											memcpy(rr->content_type, "text/html", 9);
-											rr->content_type_len = 9;
+											rr->content_type = http_res_content_type_html;
 											// Close the directory file handle.
 											rr->file = status;
 											req_res_free_file(rr);
@@ -825,7 +859,7 @@ static void on_file_open(uv_fs_t* req) {
 								rr->read_on_write = 1;
 								req_res_init_file_buf(rr);
 								// Send the `200` response headers.
-								set_headers(rr, "200 OK");
+								set_headers(rr, http_ok_code);
 								send_headers_buf(rr);
 							}
 						}
@@ -892,7 +926,7 @@ static void on_tcp_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t* buf)
 					}
 					else {
 						// Check if an previous `on_tcp_read` has parsed the headers.
-						if (rr->path != NULL) {
+						if (rr->path.len > 0) {
 							DEBUG("on_tcp_read on already parsed headers\n");
 							free(buf->base);
 						}
@@ -904,12 +938,7 @@ static void on_tcp_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t* buf)
 							}
 							else {
 								// The state object contains now all parsed headers, free the request buffer.
-								if (buf->base) {
-									free(buf->base);
-								}
-								else {
-									/* Do nothing.*/
-								}
+								free(buf->base);
 								DEBUG("path: %s\n", rr->path);
 								// `open_path_as_file` triggers [on file open](#on-file-open).
 								open_path_as_file(rr); 
@@ -991,7 +1020,9 @@ int main(int argc, char *argv[]) {
 		return_value = -1;
 	}
 	else {
-	
+		// Initialize the global buffers.
+		global_bufs_init();
+		
 		// Create the libuv event loop.
 		loop = uv_default_loop();
 	
