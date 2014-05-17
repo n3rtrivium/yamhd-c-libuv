@@ -36,6 +36,13 @@
 // Allocate `HEADER_BUF_SIZE` for generated response headers.
 #define HEADERS_BUF_SIZE 1024
 
+// All possible [parser](#parse) errors.
+#define PARSER_ERR_STATE_NULL -1
+#define PARSER_ERR_NOT_GET -2
+#define PARSER_ERR_PATH_INVALID -3
+#define PARSER_ERR_NOT_HTTP1 -4
+#define PARSER_ERR_MALLOC -5
+
 // Enable / Disable this line to toggle debug mode.
 #if 0
 #  define DEBUG_BUILD
@@ -562,8 +569,7 @@ static void set_headers(req_res_t* rr, uv_buf_t code) {
 // Reads the buffer `req` and sets the `path` and `content_type` strings of
 // the state.
 static int parse(const uv_buf_t* req, req_res_t* rr) {
-	int return_value = -1;
-
+	int return_value = PARSER_ERR_STATE_NULL;
 	if ((rr != NULL) && (req != NULL)) {
 		
 		DEBUG("parse\n");
@@ -571,7 +577,7 @@ static int parse(const uv_buf_t* req, req_res_t* rr) {
 		// Check if it is an `GET` request.
 		if (strncmp(req->base, http_req_start.base, http_req_start.len) != 0) {
 			fprintf(stderr, "Not a GET request\n");
-			return_value = -2;
+			return_value = PARSER_ERR_NOT_GET;
 		}
 		else {
 			// Search for the end of the `path`.
@@ -587,7 +593,7 @@ static int parse(const uv_buf_t* req, req_res_t* rr) {
 			// Validate the `path` length.
 			if (path_len == 0 || path_len > MAX_PATH_SIZE) {
 				fprintf(stderr, "Path invalid\n");
-				return_value = -3;
+				return_value = PARSER_ERR_PATH_INVALID;
 			}
 			else {
 				// Check if it is a `HTTP` version 1.* request.
@@ -595,14 +601,14 @@ static int parse(const uv_buf_t* req, req_res_t* rr) {
 					strncmp(req->base+path_start+path_len, http_req_after_path.base, http_req_after_path.len) != 0)
 				{
 					fprintf(stderr, "Not a HTTP/1 request\n");
-					return_value = -4;
+					return_value = PARSER_ERR_NOT_HTTP1;
 				}
 				else {
 					// Allocate memory for the `path`.
 					char * path_buf = malloc(web_root_len+path_len);
 					if (path_buf == NULL) {
 						fprintf(stderr, "malloc error\n");
-						return_value = -5;
+						return_value = PARSER_ERR_MALLOC;
 					}
 					else {
 						// Copy the path and terminate it with `\0`.
