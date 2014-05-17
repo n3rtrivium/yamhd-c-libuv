@@ -1,5 +1,5 @@
 //
-//     (c) 2014 Martin Wind and contributors
+//     (c) 2014 Martin Wind and Rene Romanus
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
