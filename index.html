@@ -27,7 +27,7 @@
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-1">&#182;</a>
               </div>
-              <pre><code>(c) <span class="hljs-number">2014</span> Martin Wind
+              <pre><code>(c) <span class="hljs-number">2014</span> Martin Wind and Rene Romanus
 </code></pre><p>This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
@@ -117,7 +117,7 @@ HTTP server framework on top of libuv.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-6">&#182;</a>
               </div>
-              <p>Allocate <code>HEADERS_BUF_SIZE</code> for generated response headers.</p>
+              <p>Allocate <code>HEADER_BUF_SIZE</code> for generated response headers.</p>
 
             </div>
             
@@ -132,12 +132,13 @@ HTTP server framework on top of libuv.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-7">&#182;</a>
               </div>
-              <p>Comment / uncommet this line to toggle debug mode.</p>
-<h1 id="define-debug_build">define DEBUG_BUILD</h1>
+              <p>Enable / Disable this line to toggle debug mode.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>
+            <div class="content"><div class='highlight'><pre><span class="hljs-preprocessor">#if 0</span>
+<span class="hljs-preprocessor">#  define DEBUG_BUILD</span>
+<span class="hljs-preprocessor">#endif</span>
 <span class="hljs-preprocessor">#ifdef DEBUG_BUILD</span>
 <span class="hljs-preprocessor">#  define DEBUG(...) fprintf(stderr, __VA_ARGS__)</span>
 <span class="hljs-preprocessor">#else</span>
@@ -387,7 +388,7 @@ file handle.</li>
             
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> send_not_found(req_res_t* rr);
 <span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> set_headers(req_res_t* rr, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* code);
-<span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>  parse(<span class="hljs-keyword">const</span> uv_buf_t* req, req_res_t* rr);</pre></div></div>
+<span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span>	parse(<span class="hljs-keyword">const</span> uv_buf_t* req, req_res_t* rr);</pre></div></div>
             
         </li>
         
@@ -433,23 +434,26 @@ the file bottom up. <a href="#main">Goto main</a></p>
             
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> req_res_t* req_res_init(uv_stream_t* handle) {
 	req_res_t* rr = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(req_res_t));
-	<span class="hljs-keyword">if</span> (rr == NULL) <span class="hljs-keyword">return</span> NULL;
-	rr-&gt;stream = handle;
-	rr-&gt;file = <span class="hljs-number">0</span>;
-	<span class="hljs-built_in">memset</span>(rr-&gt;method, <span class="hljs-string">'\0'</span>, <span class="hljs-number">8</span>);
-	rr-&gt;path = NULL;
-	rr-&gt;path_len = <span class="hljs-number">0</span>;
-	<span class="hljs-built_in">memset</span>(rr-&gt;content_type, <span class="hljs-string">'\0'</span>, <span class="hljs-number">256</span>);
-	rr-&gt;content_type_len = <span class="hljs-number">0</span>;
-	rr-&gt;close_after_write = <span class="hljs-number">0</span>;
-	rr-&gt;read_on_write = <span class="hljs-number">0</span>;
-	rr-&gt;dead = <span class="hljs-number">0</span>;
-	rr-&gt;file_pos = <span class="hljs-number">0</span>;
-	rr-&gt;file_buf = NULL;
-	rr-&gt;headers_buf = NULL;
-	rr-&gt;pending_requests = <span class="hljs-number">0</span>;
-
-	DEBUG(<span class="hljs-string">"concurrent_states (+1): %zu\n"</span>, ++concurrent_states);
+	<span class="hljs-keyword">if</span> (rr != NULL) {
+		rr-&gt;stream = handle;
+		rr-&gt;file = <span class="hljs-number">0</span>;
+		<span class="hljs-built_in">memset</span>(rr-&gt;method, <span class="hljs-string">'\0'</span>, <span class="hljs-number">8</span>);
+		rr-&gt;path = NULL;
+		rr-&gt;path_len = <span class="hljs-number">0</span>;
+		<span class="hljs-built_in">memset</span>(rr-&gt;content_type, <span class="hljs-string">'\0'</span>, <span class="hljs-number">256</span>);
+		rr-&gt;content_type_len = <span class="hljs-number">0</span>;
+		rr-&gt;close_after_write = <span class="hljs-number">0</span>;
+		rr-&gt;read_on_write = <span class="hljs-number">0</span>;
+		rr-&gt;dead = <span class="hljs-number">0</span>;
+		rr-&gt;file_pos = <span class="hljs-number">0</span>;
+		rr-&gt;file_buf = NULL;
+		rr-&gt;headers_buf = NULL;
+		rr-&gt;pending_requests = <span class="hljs-number">0</span>;
+		
+		DEBUG(<span class="hljs-string">"concurrent_states (+1): %zu\n"</span>, ++concurrent_states);
+		
+	}
+	<span class="hljs-keyword">else</span> { <span class="hljs-comment">/* Do nothing.*/</span> }
 	<span class="hljs-keyword">return</span> rr;
 }</pre></div></div>
             
@@ -470,11 +474,12 @@ the file bottom up. <a href="#main">Goto main</a></p>
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> req_res_init_file_buf(req_res_t* rr) {
 	<span class="hljs-keyword">if</span> (rr-&gt;file_buf != NULL) {
 		DEBUG(<span class="hljs-string">"req_res_init_file_buf error: read not NULL\n"</span>);
-		<span class="hljs-keyword">return</span>;
 	}
-	rr-&gt;file_buf = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_buf_t));
-	rr-&gt;file_buf-&gt;base = <span class="hljs-built_in">malloc</span>(READ_BUF_SIZE);
-	rr-&gt;file_buf-&gt;len = READ_BUF_SIZE;
+	<span class="hljs-keyword">else</span>{
+		rr-&gt;file_buf = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_buf_t));
+		rr-&gt;file_buf-&gt;base = <span class="hljs-built_in">malloc</span>(READ_BUF_SIZE);
+		rr-&gt;file_buf-&gt;len = READ_BUF_SIZE;
+	}
 }</pre></div></div>
             
         </li>
@@ -494,11 +499,12 @@ the file bottom up. <a href="#main">Goto main</a></p>
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> req_res_init_headers_buf(req_res_t* rr) {
 	<span class="hljs-keyword">if</span> (rr-&gt;headers_buf != NULL) {
 		DEBUG(<span class="hljs-string">"req_res_init_headers_buf error: header not NULL\n"</span>);
-		<span class="hljs-keyword">return</span>;
 	}
-	rr-&gt;headers_buf = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_buf_t));
-	rr-&gt;headers_buf-&gt;base = <span class="hljs-built_in">malloc</span>(HEADERS_BUF_SIZE);
-	rr-&gt;headers_buf-&gt;len = HEADERS_BUF_SIZE;
+	<span class="hljs-keyword">else</span>{
+		rr-&gt;headers_buf = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_buf_t));
+		rr-&gt;headers_buf-&gt;base = <span class="hljs-built_in">malloc</span>(HEADERS_BUF_SIZE);
+		rr-&gt;headers_buf-&gt;len = HEADERS_BUF_SIZE;
+	}
 }</pre></div></div>
             
         </li>
@@ -516,8 +522,9 @@ the file bottom up. <a href="#main">Goto main</a></p>
             </div>
             
             <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> req_res_free_file(req_res_t* rr) {
-	<span class="hljs-keyword">if</span> (rr-&gt;file != <span class="hljs-number">0</span>) {
-		uv_fs_t close_req;</pre></div></div>
+	<span class="hljs-keyword">if</span> (rr != NULL){
+		<span class="hljs-keyword">if</span> (rr-&gt;file != <span class="hljs-number">0</span>) {
+			uv_fs_t close_req;</pre></div></div>
             
         </li>
         
@@ -532,10 +539,18 @@ the file bottom up. <a href="#main">Goto main</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != uv_fs_close(loop, &amp;close_req, rr-&gt;file, NULL)) {
-			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_fs_close error\n"</span>);
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != uv_fs_close(loop, &amp;close_req, rr-&gt;file, NULL)) {
+				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_fs_close error\n"</span>);
+			}
+			uv_fs_req_cleanup(&amp;close_req);
 		}
-		uv_fs_req_cleanup(&amp;close_req);
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Do nothing yet.
+			 ToDo: DEBUG msg proposed for later server state.*/</span>
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"req_res_free_file error: rr is NULL\n"</span>);
 	}
 }</pre></div></div>
             
@@ -568,8 +583,9 @@ the file bottom up. <a href="#main">Goto main</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;pending_requests &gt; <span class="hljs-number">0</span>) {
-		DEBUG(<span class="hljs-string">"req_res_free pending requests: %d\n"</span>, rr-&gt;pending_requests);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span>(rr != NULL) {
+		<span class="hljs-keyword">if</span> (rr-&gt;pending_requests &gt; <span class="hljs-number">0</span>) {
+			DEBUG(<span class="hljs-string">"req_res_free pending requests: %d\n"</span>, rr-&gt;pending_requests);</pre></div></div>
             
         </li>
         
@@ -584,15 +600,11 @@ the file bottom up. <a href="#main">Goto main</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (!uv_is_closing((uv_handle_t *) rr-&gt;stream)) {
-			uv_close((uv_handle_t *) rr-&gt;stream, on_close);
-			rr-&gt;stream = NULL;
-		}
-		rr-&gt;dead = <span class="hljs-number">1</span>;
-		<span class="hljs-keyword">return</span>;
-	} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(rr-&gt;dead) {
-		DEBUG(<span class="hljs-string">"req_res_free free dead request\n"</span>);
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">if</span> (!uv_is_closing((uv_handle_t *) rr-&gt;stream)) {
+				uv_close((uv_handle_t *) rr-&gt;stream, on_close);
+				rr-&gt;stream = NULL;
+			}
+			rr-&gt;dead = <span class="hljs-number">1</span>;</pre></div></div>
             
         </li>
         
@@ -603,11 +615,17 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-27">&#182;</a>
               </div>
-              <p>Free the <code>path</code> string.</p>
+              <p>Here, return is fine. Change would be too complex.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;path != NULL) <span class="hljs-built_in">free</span>(rr-&gt;path);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">return</span>;
+		} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>(rr-&gt;dead) {
+			DEBUG(<span class="hljs-string">"req_res_free free dead request\n"</span>);
+		}
+		<span class="hljs-keyword">else</span> {
+			DEBUG(<span class="hljs-string">"req_res_free has no request, but is not dead.\n"</span>);
+		}</pre></div></div>
             
         </li>
         
@@ -618,14 +636,17 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-28">&#182;</a>
               </div>
-              <p>Free the read buffer.</p>
+              <p>Free the <code>path</code> string.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;file_buf != NULL) {
-		<span class="hljs-built_in">free</span>(rr-&gt;file_buf-&gt;base);
-		<span class="hljs-built_in">free</span>(rr-&gt;file_buf);
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (rr-&gt;path != NULL) {
+			<span class="hljs-comment">/* ToDo: Please review, whether the 'if' statement is necessary. */</span>
+			<span class="hljs-built_in">free</span>(rr-&gt;path);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Do nothing.*/</span>
+		}</pre></div></div>
             
         </li>
         
@@ -636,14 +657,17 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-29">&#182;</a>
               </div>
-              <p>Free the headers buffer.</p>
+              <p>Free the read buffer.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;headers_buf != NULL) {
-		<span class="hljs-built_in">free</span>(rr-&gt;headers_buf-&gt;base);
-		<span class="hljs-built_in">free</span>(rr-&gt;headers_buf);
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (rr-&gt;file_buf != NULL) {
+			<span class="hljs-built_in">free</span>(rr-&gt;file_buf-&gt;base);
+			<span class="hljs-built_in">free</span>(rr-&gt;file_buf);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Do nothing.*/</span>
+		}</pre></div></div>
             
         </li>
         
@@ -654,11 +678,17 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-30">&#182;</a>
               </div>
-              <p>Close the file descriptor.</p>
+              <p>Free the headers buffer.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	req_res_free_file(rr);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (rr-&gt;headers_buf != NULL) {
+			<span class="hljs-built_in">free</span>(rr-&gt;headers_buf-&gt;base);
+			<span class="hljs-built_in">free</span>(rr-&gt;headers_buf);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Do nothing.*/</span>
+		}</pre></div></div>
             
         </li>
         
@@ -669,13 +699,11 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-31">&#182;</a>
               </div>
-              <p>Close the stream if it is not already closed.</p>
+              <p>Close the file descriptor.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;stream != NULL &amp;&amp; !uv_is_closing((uv_handle_t *) rr-&gt;stream)) {
-		uv_close((uv_handle_t *) rr-&gt;stream, on_close);
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		req_res_free_file(rr);</pre></div></div>
             
         </li>
         
@@ -686,13 +714,16 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-32">&#182;</a>
               </div>
-              <p>Free the state struct.</p>
+              <p>Close the stream if it is not already closed.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-built_in">free</span>(rr);
-	DEBUG(<span class="hljs-string">"concurrent_states (-1): %zu\n"</span>, --concurrent_states);
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (rr-&gt;stream != NULL &amp;&amp; !uv_is_closing((uv_handle_t *) rr-&gt;stream)) {
+			uv_close((uv_handle_t *) rr-&gt;stream, on_close);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Do nothing.*/</span>
+		}</pre></div></div>
             
         </li>
         
@@ -703,9 +734,18 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-33">&#182;</a>
               </div>
-              <hr>
+              <p>Free the state struct.</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-built_in">free</span>(rr);
+		DEBUG(<span class="hljs-string">"concurrent_states (-1): %zu\n"</span>, --concurrent_states);
+		
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"req_res_free error: rr is NULL\n"</span>);
+	}
+}</pre></div></div>
             
         </li>
         
@@ -716,7 +756,7 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-34">&#182;</a>
               </div>
-              <h1 id="event-dispatcher">Event dispatcher</h1>
+              <hr>
 
             </div>
             
@@ -729,28 +769,9 @@ the file bottom up. <a href="#main">Goto main</a></p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-35">&#182;</a>
               </div>
-              <h2 id="send-headers-buf">send headers buf</h2>
-<p>Create a tcp-stream-write-request, associate it with the state, and dispatch the
-request. <a href="#on-tcp-write">on_tcp_write</a> gets called as soon as the buffer is
-written to the stream.</p>
+              <h1 id="event-dispatcher">Event dispatcher</h1>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> send_headers_buf(req_res_t* rr) {
-	uv_write_t* wr = (uv_write_t*) <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_write_t));
-
-	DEBUG(<span class="hljs-string">"send_headers_buf\n"</span>);
-
-	wr-&gt;data = rr;
-	rr-&gt;pending_requests++;
-	<span class="hljs-keyword">if</span> (uv_write(wr, rr-&gt;stream, rr-&gt;headers_buf, <span class="hljs-number">1</span>, on_tcp_write)) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_write send_headers_buf failed\n"</span>);
-		rr-&gt;pending_requests--;
-		<span class="hljs-built_in">free</span>(wr);
-		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}
-}</pre></div></div>
             
         </li>
         
@@ -761,25 +782,31 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-36">&#182;</a>
               </div>
-              <h2 id="send-file-buf">send file buf</h2>
+              <h2 id="send-headers-buf">send headers buf</h2>
 <p>Create a tcp-stream-write-request, associate it with the state, and dispatch the
 request. <a href="#on-tcp-write">on_tcp_write</a> gets called as soon as the buffer is
 written to the stream.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> send_file_buf(req_res_t* rr) {
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> send_headers_buf(req_res_t* rr) {
 	uv_write_t* wr = (uv_write_t*) <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_write_t));
-
-	DEBUG(<span class="hljs-string">"send_file_buf\n"</span>);
-
-	wr-&gt;data = rr;
-	rr-&gt;pending_requests++;
-	<span class="hljs-keyword">if</span> (uv_write(wr, rr-&gt;stream, rr-&gt;file_buf, <span class="hljs-number">1</span>, on_tcp_write)) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_write send_file_buf failed\n"</span>);
-		rr-&gt;pending_requests--;
-		<span class="hljs-built_in">free</span>(wr);
-		req_res_free(rr);
+	<span class="hljs-keyword">if</span>(wr != NULL) {
+		DEBUG(<span class="hljs-string">"send_headers_buf\n"</span>);
+		wr-&gt;data = rr;
+		rr-&gt;pending_requests++;
+		<span class="hljs-keyword">if</span> ( <span class="hljs-number">0</span> != uv_write(wr, rr-&gt;stream, rr-&gt;headers_buf, <span class="hljs-number">1</span>, on_tcp_write) ) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_write send_headers_buf failed\n"</span>);
+			rr-&gt;pending_requests--;
+			<span class="hljs-built_in">free</span>(wr);
+			req_res_free(rr);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Write is OK, Do nothing. */</span>
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"send_headers_buf error: memory leak, no handle for wr.\n"</span>);
 	}
 }</pre></div></div>
             
@@ -792,27 +819,33 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-37">&#182;</a>
               </div>
-              <h2 id="open-path-as-file">open path as file</h2>
-<p>Create a file-open-request, associate the state and dispatch it on the loop. The
-<a href="#on-file-open">on_file_open</a> is invoked once the file is opened.</p>
+              <h2 id="send-file-buf">send file buf</h2>
+<p>Create a tcp-stream-write-request, associate it with the state, and dispatch the
+request. <a href="#on-tcp-write">on_tcp_write</a> gets called as soon as the buffer is
+written to the stream.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> open_path_as_file(req_res_t *rr) {
-	<span class="hljs-keyword">int</span> r;
-	uv_fs_t* file_open_req = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_fs_t));
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> send_file_buf(req_res_t* rr) {
+	uv_write_t* wr = (uv_write_t*) <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_write_t));
+	<span class="hljs-keyword">if</span>(wr != NULL) {
+		DEBUG(<span class="hljs-string">"send_file_buf\n"</span>);
 
-	DEBUG(<span class="hljs-string">"read_file\n"</span>);
-
-	file_open_req-&gt;data = rr;
-	rr-&gt;pending_requests++;
-	r = uv_fs_open(loop, file_open_req, rr-&gt;path, O_ASYNC | O_RDONLY, S_IFREG, on_file_open);
-	<span class="hljs-keyword">if</span> (r != <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"open_path_as_file error: %d\n"</span>, r);
-		rr-&gt;pending_requests--;
-		<span class="hljs-built_in">free</span>(file_open_req);
-		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
+		wr-&gt;data = rr;
+		rr-&gt;pending_requests++;
+		<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != uv_write(wr, rr-&gt;stream, rr-&gt;file_buf, <span class="hljs-number">1</span>, on_tcp_write)) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_write send_file_buf failed\n"</span>);
+			rr-&gt;pending_requests--;
+			<span class="hljs-built_in">free</span>(wr);
+			<span class="hljs-comment">/* ToDo: To be moved to finalize? */</span>
+			req_res_free(rr);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Write is OK, Do nothing. */</span>
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"send_file_buf error: memory leak, no handle for wr.\n"</span>);
 	}
 }</pre></div></div>
             
@@ -825,26 +858,34 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-38">&#182;</a>
               </div>
-              <h2 id="read-file">read file</h2>
-<p>Create a file-read-request and dispatch it.
-<a href="#on-file-read">on_file_read</a> is invoked once the buffer is read from the file.</p>
+              <h2 id="open-path-as-file">open path as file</h2>
+<p>Create a file-open-request, associate the state and dispatch it on the loop. The
+<a href="#on-file-open">on_file_open</a> is invoked once the file is opened.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> read_file(req_res_t *rr) {
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> open_path_as_file(req_res_t *rr) {
 	<span class="hljs-keyword">int</span> r;
-	uv_fs_t* fs_req = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_fs_t));
+	uv_fs_t* file_open_req = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_fs_t));
+	<span class="hljs-keyword">if</span> (file_open_req != NULL) {
+		DEBUG(<span class="hljs-string">"read_file\n"</span>);
 
-	DEBUG(<span class="hljs-string">"read_file\n"</span>);
-
-	fs_req-&gt;data = rr;
-	rr-&gt;pending_requests++;
-	r = uv_fs_read(loop, fs_req, rr-&gt;file, rr-&gt;file_buf, <span class="hljs-number">1</span>, rr-&gt;file_pos, on_file_read);
-	<span class="hljs-keyword">if</span>  (r != <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"read error: %d\n"</span>, r);
-		rr-&gt;pending_requests--;
-		<span class="hljs-built_in">free</span>(fs_req);
-		req_res_free(rr);
+		file_open_req-&gt;data = rr;
+		rr-&gt;pending_requests++;
+		r = uv_fs_open(loop, file_open_req, rr-&gt;path, O_ASYNC | O_RDONLY, S_IFREG, on_file_open);
+		<span class="hljs-keyword">if</span> (r != <span class="hljs-number">0</span>) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"open_path_as_file error: %d\n"</span>, r);
+			rr-&gt;pending_requests--;
+			<span class="hljs-built_in">free</span>(file_open_req);
+			<span class="hljs-comment">/* ToDo: To be moved to finalize? */</span>
+			req_res_free(rr);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Open is OK, Do nothing. */</span>
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"open_path_as_file error: memory leak, no handle for file_open_req.\n"</span>);
 	}
 }</pre></div></div>
             
@@ -857,9 +898,36 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-39">&#182;</a>
               </div>
-              <hr>
+              <h2 id="read-file">read file</h2>
+<p>Create a file-read-request and dispatch it.
+<a href="#on-file-read">on_file_read</a> is invoked once the buffer is read from the file.</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> read_file(req_res_t *rr) {
+	<span class="hljs-keyword">int</span> r;
+	uv_fs_t* fs_req = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_fs_t));
+	<span class="hljs-keyword">if</span> (fs_req != NULL) {
+		DEBUG(<span class="hljs-string">"read_file\n"</span>);
+		
+		fs_req-&gt;data = rr;
+		rr-&gt;pending_requests++;
+		r = uv_fs_read(loop, fs_req, rr-&gt;file, rr-&gt;file_buf, <span class="hljs-number">1</span>, rr-&gt;file_pos, on_file_read);
+		<span class="hljs-keyword">if</span>	(r != <span class="hljs-number">0</span>) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"read error: %d\n"</span>, r);
+			rr-&gt;pending_requests--;
+			<span class="hljs-built_in">free</span>(fs_req);
+			<span class="hljs-comment">/* ToDo: To be moved to finalize? */</span>
+			req_res_free(rr);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* Read is OK, Do nothing. */</span>
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"read_file error: memory leak, no handle for fs_req.\n"</span>);
+	}
+}</pre></div></div>
             
         </li>
         
@@ -870,7 +938,7 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-40">&#182;</a>
               </div>
-              <h1 id="helpers">Helpers</h1>
+              <hr>
 
             </div>
             
@@ -883,12 +951,9 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-41">&#182;</a>
               </div>
-              <h2 id="send-not-found">send not found</h2>
+              <h1 id="helpers">Helpers</h1>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> send_not_found(req_res_t* rr) {
-	DEBUG(<span class="hljs-string">"send_not_found\n"</span>);</pre></div></div>
             
         </li>
         
@@ -899,14 +964,14 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-42">&#182;</a>
               </div>
-              <p><code>rr-&gt;close_after_write = 1</code> makes <code>on_tcp_write</code> close the connection.</p>
+              <h2 id="send-not-found">send not found</h2>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	rr-&gt;close_after_write = <span class="hljs-number">1</span>;
-	<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/html"</span>, <span class="hljs-number">9</span>);
-	rr-&gt;content_type_len = <span class="hljs-number">9</span>;
-	set_headers(rr, <span class="hljs-string">"404 Not Found"</span>);</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> send_not_found(req_res_t* rr) {
+	<span class="hljs-keyword">if</span>(rr != NULL)
+	{
+		DEBUG(<span class="hljs-string">"send_not_found\n"</span>);</pre></div></div>
             
         </li>
         
@@ -917,11 +982,14 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-43">&#182;</a>
               </div>
-              <p>Check if <code>headers_buf</code> is initialized.</p>
+              <p><code>rr-&gt;close_after_write = 1</code> makes <code>on_tcp_write</code> close the connection.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;headers_buf == NULL) <span class="hljs-keyword">return</span>;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		rr-&gt;close_after_write = <span class="hljs-number">1</span>;
+		<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/html"</span>, <span class="hljs-number">9</span>);
+		rr-&gt;content_type_len = <span class="hljs-number">9</span>;
+		set_headers(rr, <span class="hljs-string">"404 Not Found"</span>);</pre></div></div>
             
         </li>
         
@@ -932,14 +1000,11 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-44">&#182;</a>
               </div>
-              <p>Check if the buffer is big enough to add the <code>Not found</code> body.</p>
+              <p>Check if <code>headers_buf</code> is initialized.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;headers_buf-&gt;len+<span class="hljs-number">20</span> &gt;= HEADERS_BUF_SIZE) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -3"</span>);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (rr-&gt;headers_buf == NULL) <span class="hljs-keyword">return</span>;</pre></div></div>
             
         </li>
         
@@ -950,14 +1015,14 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-45">&#182;</a>
               </div>
-              <p>Add the body and set the new buffer size.</p>
+              <p>Check if the buffer is big enough to add the <code>Not found</code> body.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+rr-&gt;headers_buf-&gt;len, <span class="hljs-string">"&lt;h1&gt;Not Found&lt;/h1&gt;\n\0"</span>, <span class="hljs-number">20</span>);
-	rr-&gt;headers_buf-&gt;len += <span class="hljs-number">20</span>;
-	send_headers_buf(rr);
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (rr-&gt;headers_buf-&gt;len+<span class="hljs-number">20</span> &gt;= HEADERS_BUF_SIZE) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -3"</span>);
+		}
+		<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -968,15 +1033,19 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-46">&#182;</a>
               </div>
-              <h2 id="set-headers-helper">set headers helper</h2>
+              <p>Add the body and set the new buffer size.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> set_headers(req_res_t* rr, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* code) {
-
-	<span class="hljs-keyword">int</span> code_len = <span class="hljs-built_in">strlen</span>(code);
-
-	DEBUG(<span class="hljs-string">"set_headers\n"</span>);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+rr-&gt;headers_buf-&gt;len, <span class="hljs-string">"&lt;h1&gt;Not Found&lt;/h1&gt;\n\0"</span>, <span class="hljs-number">20</span>);
+			rr-&gt;headers_buf-&gt;len += <span class="hljs-number">20</span>;
+			send_headers_buf(rr);
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"send_not_found error: rr is NULL.\n"</span>);
+	}
+}</pre></div></div>
             
         </li>
         
@@ -987,20 +1056,15 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-47">&#182;</a>
               </div>
-              <p>Initialize the headers buffer.</p>
+              <h2 id="set-headers-helper">set headers helper</h2>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	req_res_init_headers_buf(rr);
-
-	<span class="hljs-keyword">int</span> pos = <span class="hljs-number">0</span>;
-	<span class="hljs-keyword">if</span> (code_len+<span class="hljs-number">9</span> &gt;= HEADERS_BUF_SIZE) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -1"</span>);
-		<span class="hljs-keyword">return</span>;
-	}
-	<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base, <span class="hljs-string">"HTTP/1.1 "</span>, <span class="hljs-number">9</span>);
-	<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+<span class="hljs-number">9</span>, code, code_len);
-	pos = <span class="hljs-number">9</span>+code_len;</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> set_headers(req_res_t* rr, <span class="hljs-keyword">const</span> <span class="hljs-keyword">char</span>* code) {
+	<span class="hljs-comment">/*strlen -&gt; FixMe, if any possibility to access function set_headers with external input 'code'.!!!! */</span>
+	<span class="hljs-keyword">if</span>(rr != NULL) {
+		<span class="hljs-keyword">int</span> code_len = <span class="hljs-built_in">strlen</span>(code);
+		DEBUG(<span class="hljs-string">"set_headers\n"</span>);</pre></div></div>
             
         </li>
         
@@ -1011,16 +1075,20 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-48">&#182;</a>
               </div>
-              <p>Get the UTC <code>struct tm</code>.</p>
+              <p>Initialize the headers buffer.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	time_t now = time(NULL);
-	<span class="hljs-keyword">struct</span> tm* utc = gmtime(&amp;now);
-	<span class="hljs-keyword">if</span> (utc == NULL) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"gmtime error"</span>);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		req_res_init_headers_buf(rr);
+	
+		<span class="hljs-keyword">if</span> (code_len+<span class="hljs-number">9</span> &gt;= HEADERS_BUF_SIZE) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -1"</span>);
+		}
+		<span class="hljs-keyword">else</span> {
+			<span class="hljs-comment">/* ToDo: please use defines instead magic numbers.*/</span>
+			<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base, <span class="hljs-string">"HTTP/1.1 "</span>, <span class="hljs-number">9</span>);
+			<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+<span class="hljs-number">9</span>, code, code_len);
+			<span class="hljs-keyword">int</span> pos = <span class="hljs-number">9</span>+code_len;</pre></div></div>
             
         </li>
         
@@ -1031,29 +1099,16 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-49">&#182;</a>
               </div>
-              <p>Expand the headers.</p>
+              <p>Get the UTC <code>struct tm</code>.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (strftime(rr-&gt;headers_buf-&gt;base+pos, HEADERS_BUF_SIZE-pos, <span class="hljs-string">"\nDate: %a, %d %b %Y %H:%M:%S %Z\n"</span>, utc) == <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"strftime error"</span>);
-		<span class="hljs-keyword">return</span>;
-	}
-	pos = <span class="hljs-built_in">strlen</span>(rr-&gt;headers_buf-&gt;base);
-
-	<span class="hljs-keyword">if</span> (pos+<span class="hljs-number">17</span>+rr-&gt;content_type_len &gt;= HEADERS_BUF_SIZE) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -2"</span>);
-		<span class="hljs-keyword">return</span>;
-	}
-	<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+pos, <span class="hljs-string">"Content-Type: "</span>, <span class="hljs-number">14</span>);
-	pos += <span class="hljs-number">14</span>;
-	<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+pos, rr-&gt;content_type, rr-&gt;content_type_len);
-	pos += rr-&gt;content_type_len;
-	<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+pos, <span class="hljs-string">"\n\n"</span>, <span class="hljs-number">2</span>);
-	pos += <span class="hljs-number">2</span>;
-
-	rr-&gt;headers_buf-&gt;len = pos;
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			time_t now = time(NULL);
+			<span class="hljs-keyword">struct</span> tm* utc = gmtime(&amp;now);
+			<span class="hljs-keyword">if</span> (utc == NULL) {
+				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"gmtime error"</span>);
+			}
+			<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1064,9 +1119,37 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-50">&#182;</a>
               </div>
-              <h2 id="simple-request-header-parser">Simple request header parser</h2>
+              <p>Expand the headers.</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-keyword">if</span> (strftime(rr-&gt;headers_buf-&gt;base+pos, HEADERS_BUF_SIZE-pos, <span class="hljs-string">"\nDate: %a, %d %b %Y %H:%M:%S %Z\n"</span>, utc) == <span class="hljs-number">0</span>) {
+					<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"strftime error"</span>);
+				}
+				<span class="hljs-keyword">else</span> {
+					pos = <span class="hljs-built_in">strlen</span>(rr-&gt;headers_buf-&gt;base);
+					<span class="hljs-comment">/*strlen -&gt; FixMe: at least, check pos versus potential maximum. */</span>
+					<span class="hljs-keyword">if</span> (pos+<span class="hljs-number">17</span>+rr-&gt;content_type_len &gt;= HEADERS_BUF_SIZE) {
+						<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -2"</span>);
+					}
+					<span class="hljs-keyword">else</span> {
+						<span class="hljs-comment">/* ToDo: please use defines instead magic numbers.*/</span>
+						<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+pos, <span class="hljs-string">"Content-Type: "</span>, <span class="hljs-number">14</span>);
+						pos += <span class="hljs-number">14</span>;
+						<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+pos, rr-&gt;content_type, rr-&gt;content_type_len);
+						pos += rr-&gt;content_type_len;
+						<span class="hljs-built_in">memcpy</span>(rr-&gt;headers_buf-&gt;base+pos, <span class="hljs-string">"\n\n"</span>, <span class="hljs-number">2</span>);
+						pos += <span class="hljs-number">2</span>;
+						rr-&gt;headers_buf-&gt;len = pos;
+					}
+				}
+			}
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+			DEBUG(<span class="hljs-string">"set_headers error: rr is NULL.\n"</span>);
+	}
+}</pre></div></div>
             
         </li>
         
@@ -1077,16 +1160,9 @@ written to the stream.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-51">&#182;</a>
               </div>
-              <p>Reads the buffer <code>req</code> and sets the <code>path</code> and <code>content_type</code> strings of
-the state.</p>
+              <h2 id="simple-request-header-parser">Simple request header parser</h2>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> parse(<span class="hljs-keyword">const</span> uv_buf_t* req, req_res_t* rr) {
-
-	<span class="hljs-keyword">if</span> (rr == NULL || req == NULL) <span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
-
-	DEBUG(<span class="hljs-string">"parse\n"</span>);</pre></div></div>
             
         </li>
         
@@ -1097,14 +1173,17 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-52">&#182;</a>
               </div>
-              <p>Check if it is an <code>GET</code> request.</p>
+              <p>Reads the buffer <code>req</code> and sets the <code>path</code> and <code>content_type</code> strings of
+the state.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(req-&gt;base, <span class="hljs-string">"GET "</span>, <span class="hljs-number">4</span>) != <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Not a GET request\n"</span>);
-		<span class="hljs-keyword">return</span> -<span class="hljs-number">2</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">int</span> parse(<span class="hljs-keyword">const</span> uv_buf_t* req, req_res_t* rr) {
+	<span class="hljs-keyword">int</span> return_value = -<span class="hljs-number">1</span>;
+
+	<span class="hljs-keyword">if</span> ((rr != NULL) &amp;&amp; (req != NULL)) {
+		
+		DEBUG(<span class="hljs-string">"parse\n"</span>);</pre></div></div>
             
         </li>
         
@@ -1115,18 +1194,15 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-53">&#182;</a>
               </div>
-              <p>Search for the end of the <code>path</code>.</p>
+              <p>Check if it is an <code>GET</code> request.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">int</span> path_start = <span class="hljs-number">4</span>;
-	<span class="hljs-keyword">int</span> path_len = <span class="hljs-number">0</span>;
-	<span class="hljs-keyword">while</span> (path_len+path_start &lt; req-&gt;len) {
-		<span class="hljs-keyword">if</span> (req-&gt;base[path_len+path_start] == <span class="hljs-string">' '</span>) {
-			<span class="hljs-keyword">break</span>;
+            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(req-&gt;base, <span class="hljs-string">"GET "</span>, <span class="hljs-number">4</span>) != <span class="hljs-number">0</span>) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Not a GET request\n"</span>);
+			return_value = -<span class="hljs-number">2</span>;
 		}
-		path_len++;
-	}</pre></div></div>
+		<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1137,14 +1213,19 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-54">&#182;</a>
               </div>
-              <p>Validate the <code>path</code> length.</p>
+              <p>Search for the end of the <code>path</code>.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (path_len == <span class="hljs-number">0</span> || path_len &gt; MAX_PATH_SIZE) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Path invalid\n"</span>);
-		<span class="hljs-keyword">return</span> -<span class="hljs-number">3</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">int</span> path_start = <span class="hljs-number">4</span>;
+			<span class="hljs-keyword">int</span> path_len = <span class="hljs-number">0</span>;
+			<span class="hljs-comment">/* ToDo: Potential endless loop? */</span>
+			<span class="hljs-keyword">while</span> (path_len+path_start &lt; req-&gt;len) {
+				<span class="hljs-keyword">if</span> (req-&gt;base[path_len+path_start] == <span class="hljs-string">' '</span>) {
+					<span class="hljs-keyword">break</span>;
+				}
+				path_len++;
+			}</pre></div></div>
             
         </li>
         
@@ -1155,16 +1236,16 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-55">&#182;</a>
               </div>
-              <p>Check if it is a <code>HTTP</code> version 1.* request.</p>
+              <p>Validate the <code>path</code> length.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (path_start+path_len+<span class="hljs-number">7</span> &gt; req-&gt;len ||
-		<span class="hljs-built_in">strncmp</span>(req-&gt;base+path_start+path_len, <span class="hljs-string">" HTTP/1"</span>, <span class="hljs-number">7</span>) != <span class="hljs-number">0</span>)
-	{
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Not a HTTP/1 request\n"</span>);
-		<span class="hljs-keyword">return</span> -<span class="hljs-number">4</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">if</span> (path_len == <span class="hljs-number">0</span> || path_len &gt; MAX_PATH_SIZE) {
+				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Path invalid\n"</span>);
+				return_value = -<span class="hljs-number">3</span>;
+			}
+			<span class="hljs-keyword">else</span> {
+				<span class="hljs-comment">/* ToDo: please use defines instead magic numbers.*/</span></pre></div></div>
             
         </li>
         
@@ -1175,15 +1256,17 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-56">&#182;</a>
               </div>
-              <p>Allocate memory for the <code>path</code>.</p>
+              <p>Check if it is a <code>HTTP</code> version 1.* request.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	rr-&gt;path = <span class="hljs-built_in">malloc</span>(web_root_len+path_len+<span class="hljs-number">1</span>);
-	<span class="hljs-keyword">if</span> (rr-&gt;path == NULL) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"malloc error\n"</span>);
-		<span class="hljs-keyword">return</span> -<span class="hljs-number">5</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-keyword">if</span> (path_start+path_len+<span class="hljs-number">7</span> &gt; req-&gt;len ||
+					<span class="hljs-built_in">strncmp</span>(req-&gt;base+path_start+path_len, <span class="hljs-string">" HTTP/1"</span>, <span class="hljs-number">7</span>) != <span class="hljs-number">0</span>)
+				{
+					<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Not a HTTP/1 request\n"</span>);
+					return_value = -<span class="hljs-number">4</span>;
+				}
+				<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1194,14 +1277,16 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-57">&#182;</a>
               </div>
-              <p>Copy the path and terminate it with <code>\0</code>.</p>
+              <p>Allocate memory for the <code>path</code>.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-built_in">strcpy</span>(rr-&gt;path, web_root);
-	<span class="hljs-built_in">memcpy</span>(rr-&gt;path+web_root_len, req-&gt;base+path_start, path_len+<span class="hljs-number">1</span>);
-	rr-&gt;path[path_len+web_root_len] = <span class="hljs-string">'\0'</span>;
-	rr-&gt;path_len = path_len+web_root_len;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>					rr-&gt;path = <span class="hljs-built_in">malloc</span>(web_root_len+path_len+<span class="hljs-number">1</span>);
+					<span class="hljs-keyword">if</span> (rr-&gt;path == NULL) {
+						<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"malloc error\n"</span>);
+						return_value = -<span class="hljs-number">5</span>;
+					}
+					<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1212,26 +1297,16 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-58">&#182;</a>
               </div>
-              <p>Set the content type based on the file extension.</p>
+              <p>Copy the path and terminate it with <code>\0</code>.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(rr-&gt;path+rr-&gt;path_len-<span class="hljs-number">5</span>, <span class="hljs-string">".html"</span>, <span class="hljs-number">5</span>) == <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/html"</span>, <span class="hljs-number">9</span>);
-		rr-&gt;content_type_len = <span class="hljs-number">9</span>;
-	} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(rr-&gt;path+rr-&gt;path_len-<span class="hljs-number">3</span>, <span class="hljs-string">".js"</span>, <span class="hljs-number">3</span>) == <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/javascript"</span>, <span class="hljs-number">15</span>);
-		rr-&gt;content_type_len = <span class="hljs-number">15</span>;
-	} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(rr-&gt;path+rr-&gt;path_len-<span class="hljs-number">4</span>, <span class="hljs-string">".css"</span>, <span class="hljs-number">4</span>) == <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/css"</span>, <span class="hljs-number">8</span>);
-		rr-&gt;content_type_len = <span class="hljs-number">8</span>;
-	} <span class="hljs-keyword">else</span> {
-		<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"application/octet-stream"</span>, <span class="hljs-number">24</span>);
-		rr-&gt;content_type_len = <span class="hljs-number">24</span>;
-	}
-
-	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>						<span class="hljs-built_in">strcpy</span>(rr-&gt;path, web_root);
+						<span class="hljs-built_in">memcpy</span>(rr-&gt;path+web_root_len, req-&gt;base+path_start, path_len+<span class="hljs-number">1</span>);
+						rr-&gt;path[path_len+web_root_len] = <span class="hljs-string">'\0'</span>;
+						rr-&gt;path_len = path_len+web_root_len;
+						
+						<span class="hljs-comment">/* ToDo: please use defines instead magic numbers.*/</span></pre></div></div>
             
         </li>
         
@@ -1242,9 +1317,34 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-59">&#182;</a>
               </div>
-              <hr>
+              <p>Set the content type based on the file extension.</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>						<span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(rr-&gt;path+rr-&gt;path_len-<span class="hljs-number">5</span>, <span class="hljs-string">".html"</span>, <span class="hljs-number">5</span>) == <span class="hljs-number">0</span>) {
+							<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/html"</span>, <span class="hljs-number">9</span>);
+							rr-&gt;content_type_len = <span class="hljs-number">9</span>;
+						} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(rr-&gt;path+rr-&gt;path_len-<span class="hljs-number">3</span>, <span class="hljs-string">".js"</span>, <span class="hljs-number">3</span>) == <span class="hljs-number">0</span>) {
+							<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/javascript"</span>, <span class="hljs-number">15</span>);
+							rr-&gt;content_type_len = <span class="hljs-number">15</span>;
+						} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (<span class="hljs-built_in">strncmp</span>(rr-&gt;path+rr-&gt;path_len-<span class="hljs-number">4</span>, <span class="hljs-string">".css"</span>, <span class="hljs-number">4</span>) == <span class="hljs-number">0</span>) {
+							<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/css"</span>, <span class="hljs-number">8</span>);
+							rr-&gt;content_type_len = <span class="hljs-number">8</span>;
+						} <span class="hljs-keyword">else</span> {
+							<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"application/octet-stream"</span>, <span class="hljs-number">24</span>);
+							rr-&gt;content_type_len = <span class="hljs-number">24</span>;
+						}
+						return_value = <span class="hljs-number">0</span>;
+					}
+				}
+			}
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"parse error: rr or req is NULL.\n"</span>);
+	}
+	<span class="hljs-keyword">return</span> return_value;
+}</pre></div></div>
             
         </li>
         
@@ -1255,8 +1355,7 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-60">&#182;</a>
               </div>
-              <h1 id="event-handlers">Event handlers</h1>
-<h4 id="request-alloc">request alloc</h4>
+              <hr>
 
             </div>
             
@@ -1269,15 +1368,10 @@ the state.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-61">&#182;</a>
               </div>
-              <p>Libuv does not allocate memory. Thus this function is provided to <code>uv_read_start</code> to
-allocate memory for the request buffer.</p>
+              <h1 id="event-handlers">Event handlers</h1>
+<h4 id="request-alloc">request alloc</h4>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> request_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
-	buf-&gt;base = <span class="hljs-built_in">malloc</span>(suggested_size);
-	buf-&gt;len = suggested_size;
-}</pre></div></div>
             
         </li>
         
@@ -1288,13 +1382,26 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-62">&#182;</a>
               </div>
-              <h4 id="on-close">on close</h4>
-<p>Free the stream.</p>
+              <p>Libuv does not allocate memory. Thus this function is provided to <code>uv_read_start</code> to
+allocate memory for the request buffer.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_close(uv_handle_t* peer) {
-	<span class="hljs-built_in">free</span>(peer);
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> request_alloc(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf) {
+	<span class="hljs-comment">/* ToDo: Param 'handle' incidently not used.*/</span>
+	<span class="hljs-keyword">if</span>(buf != NULL) {
+		buf-&gt;base = <span class="hljs-built_in">malloc</span>(suggested_size);
+		<span class="hljs-keyword">if</span>(buf-&gt;base != NULL) {
+			buf-&gt;len = suggested_size;
+		}
+		<span class="hljs-keyword">else</span> {
+			DEBUG(<span class="hljs-string">"request_alloc error: memory leak, no handle for buf-&gt;base with length %zu.\n"</span>, suggested_size);
+			<span class="hljs-comment">/* ToDo: Proposal: Set buf_len to INVALID_LENGTH.*/</span>
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"request_alloc error: buf is NULL.\n"</span>);
+	}
 }</pre></div></div>
             
         </li>
@@ -1306,14 +1413,15 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-63">&#182;</a>
               </div>
-              <h2 id="on-tcp-write">on tcp write</h2>
-<p>Either close the connection or read</p>
+              <h4 id="on-close">on close</h4>
+<p>Free the stream.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_tcp_write(uv_write_t* req, <span class="hljs-keyword">int</span> status) {
-	req_res_t* rr = (req_res_t*) req-&gt;data;
-	rr-&gt;pending_requests--;</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_close(uv_handle_t* peer) {
+	<span class="hljs-comment">/* ToDo: Please check with Valgrind. Is there any heap usage nested?*/</span>
+	<span class="hljs-built_in">free</span>(peer);
+}</pre></div></div>
             
         </li>
         
@@ -1324,13 +1432,16 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-64">&#182;</a>
               </div>
-              <p>Check if an error occurred in an other handler.</p>
+              <h2 id="on-tcp-write">on tcp write</h2>
+<p>Either close the connection or read</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;dead) <span class="hljs-keyword">return</span> req_res_free(rr);
-	
-	DEBUG(<span class="hljs-string">"on_tcp_write\n"</span>);</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_tcp_write(uv_write_t* req, <span class="hljs-keyword">int</span> status) {
+	<span class="hljs-keyword">if</span>(req != NULL) {
+		req_res_t* rr = (req_res_t*) req-&gt;data;
+		<span class="hljs-keyword">if</span>(rr != NULL) {
+			rr-&gt;pending_requests--;</pre></div></div>
             
         </li>
         
@@ -1341,11 +1452,15 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-65">&#182;</a>
               </div>
-              <p>Free the write request.</p>
+              <p>Check if an error occurred in an other handler.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-built_in">free</span>(req);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">if</span> (rr-&gt;dead) {
+				req_res_free(rr);
+			}
+			<span class="hljs-keyword">else</span> {
+				DEBUG(<span class="hljs-string">"on_tcp_write\n"</span>);</pre></div></div>
             
         </li>
         
@@ -1356,15 +1471,11 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-66">&#182;</a>
               </div>
-              <p>Check for write error.</p>
+              <p>Free the write request.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (status != <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"on_tcp_write error: %s - %s\n"</span>, uv_err_name(status), uv_strerror(status));
-		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-built_in">free</span>(req);</pre></div></div>
             
         </li>
         
@@ -1375,15 +1486,15 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-67">&#182;</a>
               </div>
-              <p>Either close the connection or read more data of the file.</p>
+              <p>Check for write error.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;close_after_write) {
-		DEBUG(<span class="hljs-string">"on_tcp_write is closing the connection\n"</span>);
-		req_res_free(rr);
-	} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (rr-&gt;read_on_write) {
-		rr-&gt;read_on_write = <span class="hljs-number">0</span>;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-keyword">if</span> (status != <span class="hljs-number">0</span>) {
+					<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"on_tcp_write error: %s - %s\n"</span>, uv_err_name(status), uv_strerror(status));
+					req_res_free(rr);
+				}
+				<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1394,13 +1505,15 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-68">&#182;</a>
               </div>
-              <p><code>read_file</code> triggers <a href="#on-file-open">on_file_open</a></p>
+              <p>Either close the connection or read more data of the file.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		read_file(rr);
-	}
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>					<span class="hljs-keyword">if</span> (rr-&gt;close_after_write) {
+						DEBUG(<span class="hljs-string">"on_tcp_write is closing the connection\n"</span>);
+						req_res_free(rr);
+					} <span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span> (rr-&gt;read_on_write != <span class="hljs-number">0</span>) {
+						rr-&gt;read_on_write = <span class="hljs-number">0</span>;</pre></div></div>
             
         </li>
         
@@ -1411,14 +1524,26 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-69">&#182;</a>
               </div>
-              <h2 id="on-file-read">on file read</h2>
+              <p><code>read_file</code> triggers <a href="#on-file-open">on_file_open</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_file_read(uv_fs_t * req) {
-	<span class="hljs-keyword">int</span> status = req-&gt;result;
-	req_res_t* rr = (req_res_t*) req-&gt;data;
-	rr-&gt;pending_requests--;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>						read_file(rr);
+					}
+					<span class="hljs-keyword">else</span> {
+						<span class="hljs-comment">/* Do nothing.*/</span>
+					}
+				}
+			}
+		}
+		<span class="hljs-keyword">else</span> {
+			DEBUG(<span class="hljs-string">"on_tcp_write error: req-&gt;data is NULL.\n"</span>);
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"on_tcp_write error: req is NULL.\n"</span>);
+	}
+}</pre></div></div>
             
         </li>
         
@@ -1429,13 +1554,16 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-70">&#182;</a>
               </div>
-              <p>Check if an error occurred in an other handler.</p>
+              <h2 id="on-file-read">on file read</h2>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;dead) <span class="hljs-keyword">return</span> req_res_free(rr);
-	
-	DEBUG(<span class="hljs-string">"on_file_read %s\n"</span>, rr-&gt;path);</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_file_read(uv_fs_t * req) {
+	<span class="hljs-keyword">if</span>(req != NULL) {
+		<span class="hljs-keyword">int</span> status = req-&gt;result;
+		req_res_t* rr = (req_res_t*) req-&gt;data;
+		<span class="hljs-keyword">if</span>(rr != NULL) {
+			rr-&gt;pending_requests--;</pre></div></div>
             
         </li>
         
@@ -1446,12 +1574,15 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-71">&#182;</a>
               </div>
-              <p>Free the read request.</p>
+              <p>Check if an error occurred in an other handler.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	uv_fs_req_cleanup(req);
-	<span class="hljs-built_in">free</span>(req);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">if</span> (rr-&gt;dead) {
+				req_res_free(rr);
+			}
+			<span class="hljs-keyword">else</span> {
+				DEBUG(<span class="hljs-string">"on_file_read %s\n"</span>, rr-&gt;path);</pre></div></div>
             
         </li>
         
@@ -1462,15 +1593,12 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-72">&#182;</a>
               </div>
-              <p>Check for read error.</p>
+              <p>Free the read request.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span>(status &lt; <span class="hljs-number">0</span> &amp;&amp; status != UV_EOF) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"on_file_read error: %s\n"</span>, uv_strerror(status));
-		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>				uv_fs_req_cleanup(req);
+				<span class="hljs-built_in">free</span>(req);</pre></div></div>
             
         </li>
         
@@ -1481,21 +1609,15 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-73">&#182;</a>
               </div>
-              <p>Check if the whole file is already read.</p>
+              <p>Check for read error.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (status == UV_EOF || status == <span class="hljs-number">0</span>) {
-		DEBUG(<span class="hljs-string">"on_file_read reached end of file - closing connection\n"</span>);
-		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}
-	
-	DEBUG(<span class="hljs-string">"on_file_read %d bytes\n"</span>, status);
-	
-	rr-&gt;read_on_write = <span class="hljs-number">1</span>; <span class="hljs-comment">// Read until an error happens.</span>
-	rr-&gt;file_pos += status; <span class="hljs-comment">// Update the file postion.</span>
-	rr-&gt;file_buf-&gt;len = status; <span class="hljs-comment">// This will sometimes *shrink* the buffer.</span></pre></div></div>
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-keyword">if</span>((status &lt; <span class="hljs-number">0</span> ) &amp;&amp; (status != UV_EOF)) {
+					<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"on_file_read error: %s\n"</span>, uv_strerror(status));
+					req_res_free(rr);
+				}
+				<span class="hljs-keyword">else</span></pre></div></div>
             
         </li>
         
@@ -1506,12 +1628,20 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-74">&#182;</a>
               </div>
-              <p><code>send_file_buf</code> triggers <a href="#on-tcp-write">on_tcp_write</a></p>
+              <p>Check if the whole file is already read.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	send_file_buf(rr);
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-keyword">if</span> (status == UV_EOF || status == <span class="hljs-number">0</span>) {
+					DEBUG(<span class="hljs-string">"on_file_read reached end of file - closing connection\n"</span>);
+					req_res_free(rr);
+				}
+				<span class="hljs-keyword">else</span> {
+					DEBUG(<span class="hljs-string">"on_file_read %d bytes\n"</span>, status);
+				
+					rr-&gt;read_on_write = <span class="hljs-number">1</span>; <span class="hljs-comment">// Read until an error happens.</span>
+					rr-&gt;file_pos += status; <span class="hljs-comment">// Update the file postion.</span>
+					rr-&gt;file_buf-&gt;len = status; <span class="hljs-comment">// This will sometimes *shrink* the buffer.</span></pre></div></div>
             
         </li>
         
@@ -1522,15 +1652,22 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-75">&#182;</a>
               </div>
-              <h2 id="on-file-open">on file open</h2>
+              <p><code>send_file_buf</code> triggers <a href="#on-tcp-write">on_tcp_write</a></p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_file_open(uv_fs_t* req) {
-	<span class="hljs-keyword">char</span>* path_buf;
-	<span class="hljs-keyword">int</span> r, status = req-&gt;result;
-	req_res_t* rr = (req_res_t*) req-&gt;data;
-	rr-&gt;pending_requests--;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>					send_file_buf(rr);
+				}
+			}
+		}
+		<span class="hljs-keyword">else</span> {
+			DEBUG(<span class="hljs-string">"on_file_read error: req-&gt;result is NULL.\n"</span>);
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"on_file_read error: req is NULL.\n"</span>);
+	}
+}</pre></div></div>
             
         </li>
         
@@ -1541,16 +1678,16 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-76">&#182;</a>
               </div>
-              <p>Check if an error occurred in an other handler.</p>
+              <h2 id="on-file-open">on file open</h2>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;dead) <span class="hljs-keyword">return</span> req_res_free(rr);
-	
-	DEBUG(<span class="hljs-string">"on_file_open %s\n"</span>, rr-&gt;path);
-	
-	uv_fs_req_cleanup(req);
-	<span class="hljs-built_in">free</span>(req);</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_file_open(uv_fs_t* req) {
+	<span class="hljs-keyword">if</span>(req != NULL) {
+		<span class="hljs-keyword">int</span> status = req-&gt;result;
+		req_res_t* rr = (req_res_t*) req-&gt;data;
+		<span class="hljs-keyword">if</span>(rr != NULL) {
+			rr-&gt;pending_requests--;</pre></div></div>
             
         </li>
         
@@ -1561,11 +1698,20 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-77">&#182;</a>
               </div>
-              <p>Check if <code>uv_fs_open</code> returned an error.</p>
+              <p>Check if an error occurred in an other handler.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (status &lt; <span class="hljs-number">0</span>) {</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">if</span> (rr-&gt;dead) {
+				req_res_free(rr);
+			}
+			<span class="hljs-keyword">else</span> {
+				<span class="hljs-keyword">char</span>* path_buf;
+				<span class="hljs-keyword">int</span> r;
+				DEBUG(<span class="hljs-string">"on_file_open %s\n"</span>, rr-&gt;path);
+				
+				uv_fs_req_cleanup(req);
+				<span class="hljs-built_in">free</span>(req);</pre></div></div>
             
         </li>
         
@@ -1576,16 +1722,11 @@ allocate memory for the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-78">&#182;</a>
               </div>
-              <p>Send an <code>404</code> response only on <code>File not found</code> and <code>Illegal on directory</code> error.
-Note: It is important to close the file on <code>EMFILE</code> and other errors.</p>
+              <p>Check if <code>uv_fs_open</code> returned an error.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (status == UV_ENOENT || status == UV_EISDIR) {
-			send_not_found(rr);
-			<span class="hljs-keyword">return</span>;
-		}
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"async open error '%s': %s\n"</span>, rr-&gt;path, uv_strerror(status));</pre></div></div>
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-keyword">if</span> (status &lt; <span class="hljs-number">0</span>) {</pre></div></div>
             
         </li>
         
@@ -1596,13 +1737,16 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-79">&#182;</a>
               </div>
-              <p>Close the file and free the memory.</p>
+              <p>Send an <code>404</code> response only on <code>File not found</code> and <code>Illegal on directory</code> error.
+Note: It is important to close the file on <code>EMFILE</code> and other errors.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>					<span class="hljs-keyword">if</span> (status == UV_ENOENT || status == UV_EISDIR) {
+						send_not_found(rr);
+					}
+					<span class="hljs-keyword">else</span> {
+						<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"async open error '%s': %s\n"</span>, rr-&gt;path, uv_strerror(status));</pre></div></div>
             
         </li>
         
@@ -1613,21 +1757,14 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-80">&#182;</a>
               </div>
-              <p>TODO: Recheck if it is possible to fail in <code>on_file_open</code> and get <code>status &lt; 0</code>.</p>
+              <p>Close the file and free the memory.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	uv_fs_t stat_req;
-	uv_stat_t* s;
-	r = uv_fs_stat(uv_default_loop(), &amp;stat_req, rr-&gt;path, NULL);
-	<span class="hljs-keyword">if</span> (r != <span class="hljs-number">0</span>) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_fs_stat error '%s': %s\n"</span>, rr-&gt;path, uv_strerror(r));
-		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}
-
-	s = &amp;stat_req.statbuf;
-	<span class="hljs-keyword">if</span> (!S_ISREG(s-&gt;st_mode)) {</pre></div></div>
+            <div class="content"><div class='highlight'><pre>						req_res_free(rr);
+					}
+				}
+				<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1638,22 +1775,22 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-81">&#182;</a>
               </div>
-              <p>If the file is a directory append <code>index.html</code> to the path and reopen it.</p>
+              <p>TODO: Recheck if it is possible to fail in <code>on_file_open</code> and get <code>status &lt; 0</code>.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (S_ISDIR(s-&gt;st_mode)) {
-			<span class="hljs-keyword">if</span> (rr-&gt;path_len+<span class="hljs-number">10</span> &gt;= MAX_PATH_SIZE) {
-				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -4"</span>);
-				req_res_free(rr);
-				<span class="hljs-keyword">return</span>;
-			}
-			path_buf = <span class="hljs-built_in">malloc</span>(rr-&gt;path_len+<span class="hljs-number">11</span>);
-			<span class="hljs-built_in">memcpy</span>(path_buf, rr-&gt;path, rr-&gt;path_len);
-			<span class="hljs-built_in">memcpy</span>(path_buf+rr-&gt;path_len, <span class="hljs-string">"index.html\0"</span>, <span class="hljs-number">11</span>);
-			<span class="hljs-built_in">free</span>(rr-&gt;path);
-			rr-&gt;path = path_buf;
-			rr-&gt;path_len += <span class="hljs-number">10</span>;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>					uv_fs_t stat_req;
+					
+					r = uv_fs_stat(uv_default_loop(), &amp;stat_req, rr-&gt;path, NULL);
+					<span class="hljs-keyword">if</span> (r != <span class="hljs-number">0</span>) {
+						<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_fs_stat error '%s': %s\n"</span>, rr-&gt;path, uv_strerror(r));
+						req_res_free(rr);
+					}
+					<span class="hljs-keyword">else</span> {
+						uv_stat_t* s = &amp;stat_req.statbuf;
+						
+						<span class="hljs-keyword">if</span>(s != NULL) {
+							<span class="hljs-keyword">if</span> (!S_ISREG(s-&gt;st_mode)) {</pre></div></div>
             
         </li>
         
@@ -1664,12 +1801,25 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-82">&#182;</a>
               </div>
-              <p>Set the content type.</p>
+              <p>If the file is a directory append <code>index.html</code> to the path and reopen it.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>			<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/html"</span>, <span class="hljs-number">9</span>);
-			rr-&gt;content_type_len = <span class="hljs-number">9</span>;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>								<span class="hljs-keyword">if</span> (S_ISDIR(s-&gt;st_mode)) {
+									<span class="hljs-keyword">if</span> (rr-&gt;path_len+<span class="hljs-number">10</span> &gt;= MAX_PATH_SIZE) {
+										<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"headers buffer too small: -4"</span>);
+										req_res_free(rr);
+									}
+									<span class="hljs-keyword">else</span> {
+										<span class="hljs-comment">/* ToDo: Please do not use magic numbers.*/</span>
+										path_buf = <span class="hljs-built_in">malloc</span>(rr-&gt;path_len+<span class="hljs-number">11</span>);
+										<span class="hljs-keyword">if</span>(path_buf != NULL) {
+											
+											<span class="hljs-built_in">memcpy</span>(path_buf, rr-&gt;path, rr-&gt;path_len);
+											<span class="hljs-built_in">memcpy</span>(path_buf+rr-&gt;path_len, <span class="hljs-string">"index.html\0"</span>, <span class="hljs-number">11</span>);
+											<span class="hljs-built_in">free</span>(rr-&gt;path);
+											rr-&gt;path = path_buf;
+											rr-&gt;path_len += <span class="hljs-number">10</span>;</pre></div></div>
             
         </li>
         
@@ -1680,12 +1830,12 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-83">&#182;</a>
               </div>
-              <p>Close the directory file handle.</p>
+              <p>Set the content type.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>			rr-&gt;file = status;
-			req_res_free_file(rr);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>											<span class="hljs-built_in">memcpy</span>(rr-&gt;content_type, <span class="hljs-string">"text/html"</span>, <span class="hljs-number">9</span>);
+											rr-&gt;content_type_len = <span class="hljs-number">9</span>;</pre></div></div>
             
         </li>
         
@@ -1696,12 +1846,12 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-84">&#182;</a>
               </div>
-              <p>Open the new path.</p>
+              <p>Close the directory file handle.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>			open_path_as_file(rr);
-		} <span class="hljs-keyword">else</span> {</pre></div></div>
+            <div class="content"><div class='highlight'><pre>											rr-&gt;file = status;
+											req_res_free_file(rr);</pre></div></div>
             
         </li>
         
@@ -1712,14 +1862,17 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-85">&#182;</a>
               </div>
-              <p>Not a file or directory, send a <code>404</code>.</p>
+              <p>Open the new path.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>			send_not_found(rr);
-		}
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>											open_path_as_file(rr);
+										}
+										<span class="hljs-keyword">else</span> {
+											DEBUG(<span class="hljs-string">"on_file_open error: memory leak, no handle for path_buf with length %zu.\n"</span>, rr-&gt;path_len+<span class="hljs-number">11</span>);
+										}
+									}
+								} <span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1730,11 +1883,13 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-86">&#182;</a>
               </div>
-              <p>Store the file handle.</p>
+              <p>Not a file or directory, send a <code>404</code>.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	rr-&gt;file = status;</pre></div></div>
+            <div class="content"><div class='highlight'><pre>									send_not_found(rr);
+								}
+							} <span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1745,12 +1900,11 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-87">&#182;</a>
               </div>
-              <p>Send the <code>200</code> response headers.</p>
+              <p>Store the file handle.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	rr-&gt;read_on_write = <span class="hljs-number">1</span>;
-	req_res_init_file_buf(rr);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>								rr-&gt;file = status;</pre></div></div>
             
         </li>
         
@@ -1765,9 +1919,8 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	set_headers(rr, <span class="hljs-string">"200 OK"</span>);
-	send_headers_buf(rr);
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>								rr-&gt;read_on_write = <span class="hljs-number">1</span>;
+								req_res_init_file_buf(rr);</pre></div></div>
             
         </li>
         
@@ -1778,16 +1931,29 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-89">&#182;</a>
               </div>
-              <h2 id="on-tcp-read">on tcp read</h2>
+              <p>Send the <code>200</code> response headers.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_tcp_read(uv_stream_t* handle, ssize_t nread, <span class="hljs-keyword">const</span> uv_buf_t* buf) {
-	<span class="hljs-keyword">int</span> r;
-	req_res_t *rr = (req_res_t*) handle-&gt;data;
-	
-
-	DEBUG(<span class="hljs-string">"on_tcp_read\n"</span>);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>								set_headers(rr, <span class="hljs-string">"200 OK"</span>);
+								send_headers_buf(rr);
+							}
+						}
+						<span class="hljs-keyword">else</span> {
+							DEBUG(<span class="hljs-string">"on_file_open error: &amp;stat_req.statbuf is NULL.\n"</span>);
+						}
+					}
+				}
+			}
+		}
+		<span class="hljs-keyword">else</span> {
+			DEBUG(<span class="hljs-string">"on_file_open error: req-&gt;result is NULL.\n"</span>);
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"on_file_open error: req is NULL.\n"</span>);
+	}
+}</pre></div></div>
             
         </li>
         
@@ -1798,11 +1964,18 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-90">&#182;</a>
               </div>
-              <p>Check if an error occurred in an other handler.</p>
+              <h2 id="on-tcp-read">on tcp read</h2>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;dead) <span class="hljs-keyword">return</span> req_res_free(rr);</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">static</span> <span class="hljs-keyword">void</span> on_tcp_read(uv_stream_t* handle, ssize_t nread, <span class="hljs-keyword">const</span> uv_buf_t* buf) {
+	<span class="hljs-keyword">if</span>(handle != NULL) {
+		<span class="hljs-keyword">int</span> r;
+		req_res_t *rr = (req_res_t*) handle-&gt;data;
+		
+		DEBUG(<span class="hljs-string">"on_tcp_read\n"</span>);
+		
+		<span class="hljs-keyword">if</span>(rr != NULL) {</pre></div></div>
             
         </li>
         
@@ -1813,11 +1986,14 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-91">&#182;</a>
               </div>
-              <p>Check if <code>uv_read</code> returned an error.</p>
+              <p>Check if an error occurred in an other handler.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (nread &lt; <span class="hljs-number">0</span>) {</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			<span class="hljs-keyword">if</span> (rr-&gt;dead) {
+				req_res_free(rr);
+			}
+			<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1828,13 +2004,11 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-92">&#182;</a>
               </div>
-              <p>Print every error except end of file (UV_EOF).</p>
+              <p>Check if <code>uv_read</code> returned an error.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (nread != UV_EOF) {
-			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"on_tcp_read error: %s\n"</span>, uv_err_name(nread));
-		}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>				<span class="hljs-keyword">if</span> (nread &lt; <span class="hljs-number">0</span>) {</pre></div></div>
             
         </li>
         
@@ -1845,12 +2019,17 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-93">&#182;</a>
               </div>
-              <p>Free the memory allocated by <code>request_alloc</code>.</p>
+              <p>Print every error except end of file (UV_EOF).</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		<span class="hljs-keyword">if</span> (buf-&gt;base) 
-			<span class="hljs-built_in">free</span>(buf-&gt;base);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>					<span class="hljs-keyword">if</span> (nread != UV_EOF) {
+						<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"on_tcp_read error: %s\n"</span>, uv_err_name(nread));
+					}
+					<span class="hljs-keyword">else</span> {
+						<span class="hljs-comment">/* Do nothing.*/</span>
+					}
+					<span class="hljs-keyword">if</span>(buf != NULL) {</pre></div></div>
             
         </li>
         
@@ -1861,15 +2040,12 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-94">&#182;</a>
               </div>
-              <p>Close the stream.</p>
+              <p>Free the memory allocated by <code>request_alloc</code>.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}
-	
-	<span class="hljs-keyword">if</span> (nread == <span class="hljs-number">0</span>) {</pre></div></div>
+            <div class="content"><div class='highlight'><pre>						<span class="hljs-keyword">if</span> (buf-&gt;base)
+							<span class="hljs-built_in">free</span>(buf-&gt;base);</pre></div></div>
             
         </li>
         
@@ -1880,13 +2056,19 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-95">&#182;</a>
               </div>
-              <p>Everything OK, but nothing read.</p>
+              <p>Close the stream.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>		<span class="hljs-built_in">free</span>(buf-&gt;base);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>						req_res_free(rr);
+					}
+					<span class="hljs-keyword">else</span> {
+						DEBUG(<span class="hljs-string">"on_tcp_read error: buf is NULL\n"</span>);
+					}
+				}
+				<span class="hljs-keyword">else</span> {
+					<span class="hljs-keyword">if</span> (nread == <span class="hljs-number">0</span>) {
+						<span class="hljs-keyword">if</span>(buf != NULL) {</pre></div></div>
             
         </li>
         
@@ -1897,15 +2079,17 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-96">&#182;</a>
               </div>
-              <p>Check if an previous <code>on_tcp_read</code> has parsed the headers.</p>
+              <p>Everything OK, but nothing read.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (rr-&gt;path != NULL) {
-		DEBUG(<span class="hljs-string">"on_tcp_read on already parsed headers\n"</span>);
-		<span class="hljs-built_in">free</span>(buf-&gt;base);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>							<span class="hljs-built_in">free</span>(buf-&gt;base);
+						}
+						<span class="hljs-keyword">else</span> {
+							DEBUG(<span class="hljs-string">"on_tcp_read error: buf is NULL\n"</span>);
+						}
+					}
+					<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1916,15 +2100,15 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-97">&#182;</a>
               </div>
-              <p>Parse the request headers.</p>
+              <p>Check if an previous <code>on_tcp_read</code> has parsed the headers.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	r = parse(buf, rr);
-	<span class="hljs-keyword">if</span> (r != <span class="hljs-number">0</span>) {
-		req_res_free(rr);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>						<span class="hljs-keyword">if</span> (rr-&gt;path != NULL) {
+							DEBUG(<span class="hljs-string">"on_tcp_read on already parsed headers\n"</span>);
+							<span class="hljs-built_in">free</span>(buf-&gt;base);
+						}
+						<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1935,17 +2119,15 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-98">&#182;</a>
               </div>
-              <p>The state object contains now all parsed headers, free the request buffer.</p>
+              <p>Parse the request headers.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	<span class="hljs-keyword">if</span> (buf-&gt;base) 
-		<span class="hljs-built_in">free</span>(buf-&gt;base);
-	
-	DEBUG(<span class="hljs-string">"path: %s\n"</span>, rr-&gt;path);
-	
-	open_path_as_file(rr); <span class="hljs-comment">// `open_path_as_file` triggers [on file open](#on-file-open)</span>
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>							r = parse(buf, rr);
+							<span class="hljs-keyword">if</span> (r != <span class="hljs-number">0</span>) {
+								req_res_free(rr);
+							}
+							<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -1955,6 +2137,56 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-99">&#182;</a>
+              </div>
+              <p>The state object contains now all parsed headers, free the request buffer.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>								<span class="hljs-keyword">if</span> (buf-&gt;base) {
+									<span class="hljs-built_in">free</span>(buf-&gt;base);
+								}
+								<span class="hljs-keyword">else</span> {
+									<span class="hljs-comment">/* Do nothing.*/</span>
+								}
+								DEBUG(<span class="hljs-string">"path: %s\n"</span>, rr-&gt;path);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-100">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-100">&#182;</a>
+              </div>
+              <p><code>open_path_as_file</code> triggers <a href="#on-file-open">on file open</a>.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>								open_path_as_file(rr); 
+							}
+						}
+					}
+				}
+			}
+		}
+		<span class="hljs-keyword">else</span> {
+			DEBUG(<span class="hljs-string">"on_tcp_read error: handle-&gt;data is NULL.\n"</span>);
+		}
+	}
+	<span class="hljs-keyword">else</span> {
+		DEBUG(<span class="hljs-string">"on_tcp_read error: handle is NULL.\n"</span>);
+	}
+}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-101">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-101">&#182;</a>
               </div>
               <h2 id="on-connection">on connection</h2>
 
@@ -1969,54 +2201,8 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
 	
 	<span class="hljs-keyword">if</span> (status != <span class="hljs-number">0</span>) {
 		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Connect error %s\n"</span>, uv_err_name(status));
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-100">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-100">&#182;</a>
-              </div>
-              <p>Create a new stream.</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>	stream = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_tcp_t));
-	<span class="hljs-keyword">if</span> (stream == NULL) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"malloc error\n"</span>);
-		<span class="hljs-keyword">return</span>;
 	}
-	r = uv_tcp_init(loop, (uv_tcp_t*)stream);
-	<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != r) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_tcp_init error %s\n"</span>, uv_err_name(r));
-		<span class="hljs-keyword">return</span>;
-	}
-	
-	DEBUG(<span class="hljs-string">"creating new req_res\n"</span>);
-	rr = req_res_init(stream);
-	<span class="hljs-keyword">if</span> (rr == NULL) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"malloc error\n"</span>);
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
-            
-        </li>
-        
-        
-        <li id="section-101">
-            <div class="annotation">
-              
-              <div class="pilwrap ">
-                <a class="pilcrow" href="#section-101">&#182;</a>
-              </div>
-              <p>Associate the state with stream.</p>
-
-            </div>
-            
-            <div class="content"><div class='highlight'><pre>	stream-&gt;data = rr;</pre></div></div>
+	<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -2027,15 +2213,27 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-102">&#182;</a>
               </div>
-              <p>Accept the connection</p>
+              <p>Create a new stream.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	r = uv_accept(server, stream);
-	<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != r) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_accept error %s\n"</span>, uv_err_name(r));
-		<span class="hljs-keyword">return</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		stream = <span class="hljs-built_in">malloc</span>(<span class="hljs-keyword">sizeof</span>(uv_tcp_t));
+		<span class="hljs-keyword">if</span> (stream == NULL) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"malloc error\n"</span>);
+		}
+		<span class="hljs-keyword">else</span> {
+			r = uv_tcp_init(loop, (uv_tcp_t*)stream);
+			<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != r) {
+				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_tcp_init error %s\n"</span>, uv_err_name(r));
+			}
+			<span class="hljs-keyword">else</span> {
+				DEBUG(<span class="hljs-string">"creating new req_res\n"</span>);
+				rr = req_res_init(stream);
+				<span class="hljs-comment">/* Implicit parameter check.*/</span>
+				<span class="hljs-keyword">if</span> (rr == NULL) {
+					<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"res_init error on stream\n"</span>);
+				}
+				<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -2046,18 +2244,11 @@ Note: It is important to close the file on <code>EMFILE</code> and other errors.
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-103">&#182;</a>
               </div>
-              <p>Start reading on the stream and register the <a href="#on-tcp-read">on_tcp_read</a>
-handler. Libuv will call <a href="#request-alloc">request_alloc</a> to allocate memory for
-the request buffer.</p>
+              <p>Associate the state with stream.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	r = uv_read_start(stream, request_alloc, on_tcp_read);
-	<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != r) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_read_start error %s\n"</span>, uv_err_name(r));
-	}
-
-}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>					stream-&gt;data = rr;</pre></div></div>
             
         </li>
         
@@ -2068,9 +2259,15 @@ the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-104">&#182;</a>
               </div>
-              <hr>
+              <p>Accept the connection</p>
 
             </div>
+            
+            <div class="content"><div class='highlight'><pre>					r = uv_accept(server, stream);
+					<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != r) {
+						<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_accept error %s\n"</span>, uv_err_name(r));
+					}
+					<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -2081,18 +2278,22 @@ the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-105">&#182;</a>
               </div>
-              <h1 id="main">main</h1>
+              <p>Start reading on the stream and register the <a href="#on-tcp-read">on_tcp_read</a>
+handler. Libuv will call <a href="#request-alloc">request_alloc</a> to allocate memory for
+the request buffer.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">int</span> main(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span> *argv[]) {
-	<span class="hljs-keyword">struct</span> sockaddr_in addr;
-	<span class="hljs-keyword">int</span> r, port;
-	
-	<span class="hljs-keyword">if</span> (argc != <span class="hljs-number">4</span>) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"usage: %s &lt;ip&gt; &lt;port&gt; &lt;web-root&gt;\n"</span>, argv[<span class="hljs-number">0</span>]);
-		<span class="hljs-keyword">return</span> -<span class="hljs-number">1</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>						r = uv_read_start(stream, request_alloc, on_tcp_read);
+						<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != r) {
+							<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"uv_read_start error %s\n"</span>, uv_err_name(r));
+						}
+					}
+				}
+			}
+		}
+	}
+}</pre></div></div>
             
         </li>
         
@@ -2103,20 +2304,9 @@ the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-106">&#182;</a>
               </div>
-              <p>Create the libuv event loop.</p>
+              <hr>
 
             </div>
-            
-            <div class="content"><div class='highlight'><pre>	loop = uv_default_loop();
-	
-	web_root = argv[<span class="hljs-number">3</span>];
-	web_root_len = <span class="hljs-built_in">strlen</span>(web_root);
-	port = (<span class="hljs-keyword">int</span>)strtol(argv[<span class="hljs-number">2</span>], NULL, <span class="hljs-number">0</span>);
-	r = uv_ip4_addr(argv[<span class="hljs-number">1</span>], port, &amp;addr);
-	<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != r) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Listen error %s\n"</span>, uv_err_name(r));
-		<span class="hljs-keyword">return</span> <span class="hljs-number">2</span>;
-	}</pre></div></div>
             
         </li>
         
@@ -2127,15 +2317,19 @@ the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-107">&#182;</a>
               </div>
-              <p>Create a new TCP socket.</p>
+              <h1 id="main">main</h1>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	r = uv_tcp_init(loop, &amp;tcp_server);
-	<span class="hljs-keyword">if</span> (r) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Socket creation error %s\n"</span>, uv_err_name(r));
-		<span class="hljs-keyword">return</span> <span class="hljs-number">3</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre><span class="hljs-keyword">int</span> main(<span class="hljs-keyword">int</span> argc, <span class="hljs-keyword">char</span> *argv[]) {
+	<span class="hljs-keyword">struct</span> sockaddr_in addr;
+	<span class="hljs-keyword">int</span> port, return_value;
+	
+	<span class="hljs-keyword">if</span> (argc != <span class="hljs-number">4</span>) {
+		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"usage: %s &lt;ip&gt; &lt;port&gt; &lt;web-root&gt;\n"</span>, argv[<span class="hljs-number">0</span>]);
+		return_value = -<span class="hljs-number">1</span>;
+	}
+	<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -2146,15 +2340,22 @@ the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-108">&#182;</a>
               </div>
-              <p>Bind the socket to the IPv4 address and port.</p>
+              <p>Create the libuv event loop.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	r = uv_tcp_bind(&amp;tcp_server, (<span class="hljs-keyword">const</span> <span class="hljs-keyword">struct</span> sockaddr*) &amp;addr, <span class="hljs-number">0</span>);
-		<span class="hljs-keyword">if</span> (r) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Bind error %s\n"</span>, uv_err_name(r));
-		<span class="hljs-keyword">return</span> <span class="hljs-number">4</span>;
-	}</pre></div></div>
+            <div class="content"><div class='highlight'><pre>		loop = uv_default_loop();
+	
+		web_root = argv[<span class="hljs-number">3</span>];
+		<span class="hljs-comment">/* ToDo: Add check for argv ! */</span>
+		web_root_len = <span class="hljs-built_in">strlen</span>(web_root);
+		port = (<span class="hljs-keyword">int</span>)strtol(argv[<span class="hljs-number">2</span>], NULL, <span class="hljs-number">0</span>);
+		return_value = uv_ip4_addr(argv[<span class="hljs-number">1</span>], port, &amp;addr);
+		<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != return_value) {
+			<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Listen error %s\n"</span>, uv_err_name(return_value));
+			return_value = <span class="hljs-number">2</span>;
+		}
+		<span class="hljs-keyword">else</span> {</pre></div></div>
             
         </li>
         
@@ -2165,18 +2366,15 @@ the request buffer.</p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-109">&#182;</a>
               </div>
-              <p>Register the <a href="#on-connection">on_connection</a> handler for connections on
-the socket. </p>
+              <p>Create a new TCP socket.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	r = uv_listen((uv_stream_t*)&amp;tcp_server, SOMAXCONN, on_connection);
-	<span class="hljs-keyword">if</span> (r) {
-		<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Listen error %s\n"</span>, uv_err_name(r));
-		<span class="hljs-keyword">return</span> <span class="hljs-number">5</span>;
-	}
-	
-	DEBUG(<span class="hljs-string">"Server listen on %s:%d serving %s\n"</span>, argv[<span class="hljs-number">1</span>], port, web_root);</pre></div></div>
+            <div class="content"><div class='highlight'><pre>			return_value = uv_tcp_init(loop, &amp;tcp_server);
+			<span class="hljs-keyword">if</span> (return_value) {
+				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Socket creation error %s\n"</span>, uv_err_name(return_value));
+				return_value = <span class="hljs-number">3</span>;
+			}</pre></div></div>
             
         </li>
         
@@ -2187,13 +2385,57 @@ the socket. </p>
               <div class="pilwrap ">
                 <a class="pilcrow" href="#section-110">&#182;</a>
               </div>
+              <p>Bind the socket to the IPv4 address and port.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			return_value = uv_tcp_bind(&amp;tcp_server, (<span class="hljs-keyword">const</span> <span class="hljs-keyword">struct</span> sockaddr*) &amp;addr, <span class="hljs-number">0</span>);
+			<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != return_value) {
+				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Bind error %s\n"</span>, uv_err_name(return_value));
+				return_value = <span class="hljs-number">4</span>;
+			}</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-111">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-111">&#182;</a>
+              </div>
+              <p>Register the <a href="#on-connection">on_connection</a> handler for connections on
+the socket.</p>
+
+            </div>
+            
+            <div class="content"><div class='highlight'><pre>			return_value = uv_listen((uv_stream_t*)&amp;tcp_server, SOMAXCONN, on_connection);
+			<span class="hljs-keyword">if</span> (<span class="hljs-number">0</span> != return_value) {
+				<span class="hljs-built_in">fprintf</span>(stderr, <span class="hljs-string">"Listen error %s\n"</span>, uv_err_name(return_value));
+				return_value = <span class="hljs-number">5</span>;
+			}
+			<span class="hljs-comment">/* ToDo: Add check for argv ! */</span>
+			DEBUG(<span class="hljs-string">"Server listen on %s:%d serving %s\n"</span>, argv[<span class="hljs-number">1</span>], port, web_root);</pre></div></div>
+            
+        </li>
+        
+        
+        <li id="section-112">
+            <div class="annotation">
+              
+              <div class="pilwrap ">
+                <a class="pilcrow" href="#section-112">&#182;</a>
+              </div>
               <p>Start the event loop.</p>
 
             </div>
             
-            <div class="content"><div class='highlight'><pre>	uv_run(loop, UV_RUN_DEFAULT);
-
-	<span class="hljs-keyword">return</span> <span class="hljs-number">0</span>;
+            <div class="content"><div class='highlight'><pre>			uv_run(loop, UV_RUN_DEFAULT);
+			
+			return_value = <span class="hljs-number">0</span>;
+		}
+	}
+	<span class="hljs-keyword">return</span> return_value;
 }</pre></div></div>
             
         </li>
