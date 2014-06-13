@@ -44,7 +44,7 @@
 #define PARSER_ERR_MALLOC -5
 
 // Enable / Disable this line to toggle debug mode.
-#if 0
+#if 1
 #  define DEBUG_BUILD
 #endif
 #ifdef DEBUG_BUILD
@@ -743,7 +743,7 @@ static void on_file_read(uv_fs_t * req) {
 				req_res_free(rr);
 			}
 			else {
-				DEBUG("on_file_read %s\n", rr->path);
+				DEBUG("on_file_read %s\n", rr->path.base);
 				
 				// Free the read request.
 				uv_fs_req_cleanup(req);
@@ -796,7 +796,7 @@ static void on_file_open(uv_fs_t* req) {
 			else {
 				char* path_buf;
 				int r;
-				DEBUG("on_file_open %s\n", rr->path);
+				DEBUG("on_file_open %s\n", rr->path.base);
 				
 				uv_fs_req_cleanup(req);
 				free(req);
@@ -851,7 +851,7 @@ static void on_file_open(uv_fs_t* req) {
 											open_path_as_file(rr);
 										}
 										else {
-											DEBUG("on_file_open error: memory leak, no handle for path_buf with length %zu.\n", rr->path_len+11);
+											DEBUG("on_file_open error: memory leak, no handle for path_buf with length %zu.\n", rr->path.len + http_req_index.len);
 										}
 									}
 								} else {
@@ -945,7 +945,7 @@ static void on_tcp_read(uv_stream_t* handle, ssize_t nread, const uv_buf_t* buf)
 							else {
 								// The state object contains now all parsed headers, free the request buffer.
 								free(buf->base);
-								DEBUG("path: %s\n", rr->path);
+								DEBUG("path: %s\n", rr->path.base);
 								// `open_path_as_file` triggers [on file open](#on-file-open).
 								open_path_as_file(rr); 
 							}
