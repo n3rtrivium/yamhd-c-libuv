@@ -12,8 +12,8 @@ UV_EXT=1.dylib
 endif
 
 ifeq (Linux, $(uname_S))
-LIBS=-lrt -ldl -lm -pthread -lcurl -Wl,-rpath -Wl,lib
-UV_EXT=so.11 
+LIBS=-lrt -ldl -lm -pthread -Wl,-rpath -Wl,lib
+UV_EXT=so.1
 endif
 
 UV_LIB=lib/libuv.$(UV_EXT)
